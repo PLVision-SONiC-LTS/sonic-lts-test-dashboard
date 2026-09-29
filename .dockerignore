@@ -1,0 +1,13 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.db
+*.db-shm
+*.db-wal
+.env
+.git/
+.gitignore
+.vscode/
+.idea/
+docker-compose.yml

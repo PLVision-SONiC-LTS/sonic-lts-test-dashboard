@@ -1,0 +1,23 @@
+services:
+  dashboard:
+    build: .
+    image: test-dashboard:latest
+    ports:
+      - "8080:8080"
+      - "8001:8001"   # Test dashboard MCP HTTP/SSE
+      - "8002:8002"   # Jira MCP HTTP/SSE (jira_mcp_server.py)
+    volumes:
+      - dashboard-data:/data   # persists the SQLite database
+      - ./certs:/app/certs:ro  # self-signed TLS cert (generate with: ./gen-cert.sh)
+    env_file:
+      - .env
+    environment:
+      - DB_PATH=/data/allure_data.db
+      - SSL_CERTFILE=/app/certs/cert.pem
+      - SSL_KEYFILE=/app/certs/key.pem
+    restart: unless-stopped
+    network_mode: host
+    container_name: test-dashboard
+
+volumes:
+  dashboard-data:

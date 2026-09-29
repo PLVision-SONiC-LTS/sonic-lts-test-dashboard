@@ -1,0 +1,82 @@
+# ---------------------------------------------------------------------------
+# lite_dashboard systemd service (TEMPLATE)
+#
+# Ownership model:
+#   * Docker's `--restart unless-stopped` policy stays in charge of CRASH
+#     recovery (kept for compatibility with other teams).
+#   * systemd does NOT restart the container (Restart=no); it only TRACKS its
+#     status and manages the iptables 443->8080 rules + coupled start/stop.
+#
+# On start (boot or `systemctl start`):
+#   1. Add iptables NAT rules 443 -> 8080 (idempotent).
+#   2. `docker start` the container (no-op if Docker already started it).
+#   3. Attach to the running container so systemd reflects its live status.
+#
+# On stop (`systemctl stop`):
+#   1. `docker stop` the container.
+#   2. Remove the iptables rules it added.
+#   (Next `systemctl start` will start the container again — see step above.)
+#
+# Prerequisites:
+#   The container must already exist. Build & create it once with:
+#       ./easy_setup.sh deploy
+#
+# Install:
+#   sudo cp dashboard.service /etc/systemd/system/dashboard.service
+#   sudo systemctl daemon-reload
+#   sudo systemctl enable --now dashboard.service
+#
+# Manage:
+#   sudo systemctl status dashboard.service
+#   sudo systemctl stop  dashboard.service   # stops container + removes rules
+#   sudo systemctl start dashboard.service   # re-adds rules + starts container
+#
+# Uninstall:
+#   sudo systemctl disable --now dashboard.service
+#   sudo rm /etc/systemd/system/dashboard.service
+#   sudo systemctl daemon-reload
+#
+# NOTE (expected drift): because Docker owns crash recovery, if the container
+# crashes Docker will restart it while this unit's `docker attach` exits, so
+# systemd may show the unit as inactive even though the container is running
+# again. Run `systemctl start dashboard.service` to re-attach/re-track. The
+# port-forward rules are unaffected by that.
+# ---------------------------------------------------------------------------
+
+[Unit]
+Description=lite_dashboard container tracking + 443->8080 port forward
+After=network-online.target docker.service
+Wants=network-online.target
+Requires=docker.service
+
+[Service]
+Type=exec
+Environment=CONTAINER=test-dashboard
+
+# Do not let systemd restart the container; Docker's restart policy owns that.
+Restart=no
+
+# --- Start: add iptables rules (idempotent), then ensure the container is up ---
+# PREROUTING: inbound traffic arriving at the host destined for :443 -> :8080.
+# OUTPUT is scoped to `-o lo` on purpose: it only rewrites packets the host
+# sends to ITS OWN addresses (the kernel routes those via loopback), so that
+# host-local access to https://<self>:443 works. WITHOUT `-o lo` the rule would
+# also hijack the host's outbound HTTPS to the internet (github, pypi, ...),
+# because every locally-originated :443 packet would be redirected to :8080.
+ExecStartPre=/bin/sh -c 'iptables -t nat -C PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8080 2>/dev/null || iptables -t nat -A PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8080'
+ExecStartPre=/bin/sh -c 'iptables -t nat -C OUTPUT -o lo -p tcp --dport 443 -j REDIRECT --to-port 8080 2>/dev/null || iptables -t nat -A OUTPUT -o lo -p tcp --dport 443 -j REDIRECT --to-port 8080'
+ExecStartPre=-/usr/bin/docker start ${CONTAINER}
+
+# --- Track: attach to the (possibly already-running) container and block ---
+# --no-stdin: don't hijack the container's stdin
+# --sig-proxy=false: a SIGTERM from `systemctl stop` won't kill the container
+#                    out-of-band; ExecStop's `docker stop` does that cleanly.
+ExecStart=/usr/bin/docker attach --no-stdin --sig-proxy=false ${CONTAINER}
+
+# --- Stop: stop the container, then remove the iptables rules ---
+ExecStop=/usr/bin/docker stop ${CONTAINER}
+ExecStop=/bin/sh -c 'while iptables -t nat -C PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8080 2>/dev/null; do iptables -t nat -D PREROUTING -p tcp --dport 443 -j REDIRECT --to-port 8080; done'
+ExecStop=/bin/sh -c 'while iptables -t nat -C OUTPUT -o lo -p tcp --dport 443 -j REDIRECT --to-port 8080 2>/dev/null; do iptables -t nat -D OUTPUT -o lo -p tcp --dport 443 -j REDIRECT --to-port 8080; done'
+
+[Install]
+WantedBy=multi-user.target

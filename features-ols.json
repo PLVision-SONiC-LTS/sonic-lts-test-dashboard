@@ -1,0 +1,428 @@
+{
+  "version": 1,
+  "scope": "ols",
+  "features": [
+    {
+      "name": "PoE per port power cycle",
+      "group": "Comamnds",
+      "mappings": [
+        "test_poe_power"
+      ]
+    },
+    {
+      "name": "Factory Reset",
+      "group": "Commands",
+      "mappings": [
+        "test_ols_factory_reset"
+      ]
+    },
+    {
+      "name": "Firmware Upgrade / Downgrade",
+      "group": "Commands",
+      "mappings": [
+        "test_ols_firmware_downgrade"
+      ]
+    },
+    {
+      "name": "RTTY",
+      "group": "Commands",
+      "mappings": [
+        "test_rtty_session_establishes_valid_remote_terminal_connection"
+      ]
+    },
+    {
+      "name": "Reboot",
+      "group": "Commands",
+      "mappings": [
+        "test_boot_time_sonic_bpa_after_reboot_ols",
+        "test_l2_traffic_to_dut_after_reboot_ols",
+        "test_l3_traffic_to_dut_after_reboot_ols",
+        "test_ols_connection_after_reboot",
+        "test_ports_oper_equal_up_after_reboot_ols",
+        "test_reboot_cause_history_table_ols",
+        "test_reboot_kafka_event_ols",
+        "test_reboot_reason_time_difference_acceptable_ols",
+        "test_services_ready_after_reboot_ols",
+        "test_show_version_after_reboot_ols",
+        "test_syseeprom_after_reboot_ols"
+      ]
+    },
+    {
+      "name": "HW and Feature capabilities Reporting",
+      "group": "Connect Events",
+      "mappings": [
+        "test_ols_capabilities",
+        "test_reboot_kafka_connection_events_ols"
+      ]
+    },
+    {
+      "name": "DHCP Server support (Enable/Disable)",
+      "group": "Device Management",
+      "mappings": [
+        "test_service_telnet"
+      ]
+    },
+    {
+      "name": "NTP Peer Configuration",
+      "group": "Device Management",
+      "mappings": [
+        "test_ols_ntp"
+      ]
+    },
+    {
+      "name": "Services Control (Enable/Disable)",
+      "group": "Device Management",
+      "mappings": []
+    },
+    {
+      "name": "LACP",
+      "group": "L2 Features",
+      "mappings": [
+        "test_ols_port_lacp_state"
+      ]
+    },
+    {
+      "name": "LLDP",
+      "group": "L2 Features",
+      "mappings": []
+    },
+    {
+      "name": "Multicast IGMP",
+      "group": "L2 Features",
+      "mappings": [
+        "test_igmp_fast_leave",
+        "test_igmp_mc_disable_enable",
+        "test_igmp_member_port_down",
+        "test_igmp_pim_hello_msg",
+        "test_igmp_port_in_multiple_l2mc",
+        "test_igmp_port_leave_vlan",
+        "test_igmp_report_leave",
+        "test_igmp_static_config",
+        "test_igmp_version_compatability"
+      ]
+    },
+    {
+      "name": "RPVSTP",
+      "group": "L2 Features",
+      "mappings": [
+        "test_ols_bpdu_guard",
+        "test_ols_spanning_tree",
+        "test_ols_stp_disabled_instance",
+        "test_ols_stp_multi_vlan_disable_one_instance"
+      ]
+    },
+    {
+      "name": "Static Link Aggregation",
+      "group": "L2 Features",
+      "mappings": []
+    },
+    {
+      "name": "Storm Control",
+      "group": "L2 Features",
+      "mappings": [
+        "test_negative_storm_control",
+        "test_positive_storm_control"
+      ]
+    },
+    {
+      "name": "VLAN Access Port",
+      "group": "L2 Features",
+      "mappings": []
+    },
+    {
+      "name": "VLAN Trunk Port",
+      "group": "L2 Features",
+      "mappings": []
+    },
+    {
+      "name": "DHCP Relay",
+      "group": "L3 Features",
+      "mappings": []
+    },
+    {
+      "name": "DHCP Server",
+      "group": "L3 Features",
+      "mappings": [
+        "test_ols_dhcp_server_port_based_assignment_range_ip",
+        "test_ols_dhcp_server_single_ip_assignment"
+      ]
+    },
+    {
+      "name": "IP ACL",
+      "group": "L3 Features",
+      "mappings": [
+        "test_dest_ip_match_dropped",
+        "test_dest_ip_match_forwarded",
+        "test_egress_unmatched_forwarded",
+        "test_icmp_match_forwarded",
+        "test_icmp_source_ip_match_dropped",
+        "test_icmp_source_ip_match_forwarded",
+        "test_ingress_unmatched_blocked",
+        "test_ip_proto_match_dropped",
+        "test_ip_proto_match_forwarded",
+        "test_l4_dport_match_dropped",
+        "test_l4_dport_match_forwarded",
+        "test_l4_dport_range_match_dropped",
+        "test_l4_dport_range_match_forwarded",
+        "test_l4_sport_match_dropped",
+        "test_l4_sport_match_forwarded",
+        "test_l4_sport_range_match_dropped",
+        "test_l4_sport_range_match_forwarded",
+        "test_rules_priority_dropped",
+        "test_rules_priority_forwarded",
+        "test_source_ip_match_dropped",
+        "test_source_ip_match_forwarded",
+        "test_tcp_flags_match_dropped",
+        "test_tcp_flags_match_forwarded",
+        "test_udp_source_ip_match_dropped",
+        "test_udp_source_ip_match_forwarded"
+      ]
+    },
+    {
+      "name": "Routing",
+      "group": "L3 Features",
+      "mappings": [
+        "test_ols_static_route_dual_vlan_same_nexthop",
+        "test_ols_static_route_ipv4"
+      ]
+    },
+    {
+      "name": "SVI",
+      "group": "L3 Features",
+      "mappings": [
+        "test_ols_inter_vlan_broadcast_no_leak",
+        "test_ols_inter_vlan_forwarding_ipv4",
+        "test_ols_inter_vlan_forwarding_ipv4_source_ports",
+        "test_ols_inter_vlan_multi_address",
+        "test_ols_inter_vlan_routing_ipv6"
+      ]
+    },
+    {
+      "name": "Scale",
+      "group": "Performance",
+      "mappings": []
+    },
+    {
+      "name": "Enable/disable",
+      "group": "PoE Management",
+      "mappings": [
+        "test_poe_power"
+      ]
+    },
+    {
+      "name": "LLDP+PoE",
+      "group": "PoE Management",
+      "mappings": [
+        "test_poe_lldp"
+      ]
+    },
+    {
+      "name": "Power Limit configuration",
+      "group": "PoE Management",
+      "mappings": [
+        "test_poe_active_client",
+        "test_poe_power_limit",
+        "test_poe_power_limit_boundaries",
+        "test_poe_priority",
+        "test_poe_proto_max_power_setting"
+      ]
+    },
+    {
+      "name": "power cycle in Config (do-reset)",
+      "group": "PoE Management",
+      "mappings": [
+        "test_poe_power_cycle"
+      ]
+    },
+    {
+      "name": "Cable Diagnostic",
+      "group": "Port Management",
+      "mappings": []
+    },
+    {
+      "name": "Dulplex",
+      "group": "Port Management",
+      "mappings": []
+    },
+    {
+      "name": "Jumbo Frames support",
+      "group": "Port Management",
+      "mappings": [
+        "test_ols_jumbo_frame"
+      ]
+    },
+    {
+      "name": "Port Admin Enable / Disable",
+      "group": "Port Management",
+      "mappings": [
+        "test_ols_admin_state_no_jumbo_frame"
+      ]
+    },
+    {
+      "name": "Speed",
+      "group": "Port Management",
+      "mappings": [
+        "test_ols_port_speed"
+      ]
+    },
+    {
+      "name": "ifAlias",
+      "group": "Port Management",
+      "mappings": [
+        "test_ols_port_alias_state"
+      ]
+    },
+    {
+      "name": "Hardware Events - Module Insert/removal",
+      "group": "Realtime Features",
+      "mappings": []
+    },
+    {
+      "name": "Hardware Events - Module Power Failure",
+      "group": "Realtime Features",
+      "mappings": []
+    },
+    {
+      "name": "Loop Detection (STP/RSTP/MSTP) Events",
+      "group": "Realtime Features",
+      "mappings": []
+    },
+    {
+      "name": "Port Status Change Event",
+      "group": "Realtime Features",
+      "mappings": [
+        "test_ols_port_up_down_realtime_event"
+      ]
+    },
+    {
+      "name": "Upgrade Events",
+      "group": "Realtime Features",
+      "mappings": []
+    },
+    {
+      "name": "Reliability",
+      "group": "Recovery",
+      "mappings": [
+        "test_ols_operational_certificate_reenroll"
+      ]
+    },
+    {
+      "name": "802.1x",
+      "group": "Security",
+      "mappings": [
+        "test_ols_dot1x"
+      ]
+    },
+    {
+      "name": "Carriers and Counters",
+      "group": "State Messages",
+      "mappings": [
+        "test_ols_port_interface_counters_state"
+      ]
+    },
+    {
+      "name": "LLDP Peers",
+      "group": "State Messages",
+      "mappings": [
+        "test_ols_lldp_peers_state_message"
+      ]
+    },
+    {
+      "name": "Memory Load",
+      "group": "State Messages",
+      "mappings": []
+    },
+    {
+      "name": "PoE Status Event (Global / unit-poe-state)",
+      "group": "State Messages",
+      "mappings": [
+        "test_ols_port_up_down_realtime_event"
+      ]
+    },
+    {
+      "name": "Private IP",
+      "group": "State Messages",
+      "mappings": []
+    },
+    {
+      "name": "Public IP",
+      "group": "State Messages",
+      "mappings": []
+    },
+    {
+      "name": "SFP Status",
+      "group": "State Messages",
+      "mappings": [
+        "test_ols_port_sfp_state"
+      ]
+    },
+    {
+      "name": "Speed & Duplex",
+      "group": "State Messages",
+      "mappings": [
+        "test_ols_port_duplex",
+        "test_ols_port_speed"
+      ]
+    },
+    {
+      "name": "State Messages",
+      "group": "State Messages",
+      "mappings": []
+    },
+    {
+      "name": "Temperature",
+      "group": "State Messages",
+      "mappings": []
+    },
+    {
+      "name": "Timestamps",
+      "group": "State Messages",
+      "mappings": []
+    },
+    {
+      "name": "CLI Via Console",
+      "group": "Troubleshooting",
+      "mappings": []
+    },
+    {
+      "name": "DNS Lookup",
+      "group": "Troubleshooting",
+      "mappings": [
+        "test_ols_scripts"
+      ]
+    },
+    {
+      "name": "LED Blink",
+      "group": "Troubleshooting",
+      "mappings": []
+    },
+    {
+      "name": "Ping",
+      "group": "Troubleshooting",
+      "mappings": [
+        "test_ols_scripts"
+      ]
+    },
+    {
+      "name": "Radius",
+      "group": "Troubleshooting",
+      "mappings": [
+        "test_ols_radius"
+      ]
+    },
+    {
+      "name": "SSB (Switch Support Bundle)",
+      "group": "Troubleshooting",
+      "mappings": [
+        "test_diagnostic_bundle_contains_valid_dut_information"
+      ]
+    },
+    {
+      "name": "Traceroute",
+      "group": "Troubleshooting",
+      "mappings": [
+        "test_ols_scripts"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,4349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Test Dashboard</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>%E2%9A%A1</text></svg>" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <style>
+    /* scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+    /* panel slide-in */
+    #detail-panel { transition: transform 0.25s ease; }
+    #detail-panel.open { transform: translateX(0) !important; }
+    /* pill active state */
+    .pill.active { background: #3b82f6 !important; color: #fff !important; }
+    /* pass-rate bar segments */
+    .bar-seg { height: 8px; display: inline-block; }
+    /* login overlay */
+    #login-overlay { backdrop-filter: blur(4px); }
+    /* tabs */
+    .tab-btn { padding: 0.6rem 1rem; font-size: 0.75rem; font-weight: 500; border-bottom: 2px solid transparent; color: #94a3b8; transition: all .15s; }
+    .tab-btn:hover { color: #e2e8f0; background: #1e293b; }
+    .tab-btn.active-tab { color: #60a5fa; border-bottom-color: #60a5fa; background: #1e293b; font-weight: 600; }
+    /* feature panel */
+  </style>
+</head>
+
+<body class="bg-slate-950 text-slate-100 min-h-screen font-sans">
+
+<!-- ── Header ─────────────────────────────────────────────── -->
+<header class="sticky top-0 z-30 bg-slate-900 border-b border-slate-800 px-6 py-3 flex items-center justify-between">
+  <div class="flex items-center gap-3">
+    <span class="text-xl font-bold text-blue-400">⚡ Test Dashboard</span>
+    <span id="project-count" class="text-xs text-slate-500"></span>
+  </div>
+  <div class="flex items-center gap-4 text-xs text-slate-400">
+    <button onclick="refreshData()" class="hover:text-blue-400 transition-colors">↺ Refresh</button>
+    <span id="last-refresh"></span>
+    <button onclick="openReportModal()"
+      class="hover:text-green-400 transition-colors" title="Generate HTML test report">📄 Report</button>
+    <span id="user-info" class="hidden items-center gap-2">
+      <span class="text-slate-500">|</span>
+      <span id="username-label" class="text-slate-300"></span>
+      <button onclick="openSettings()"
+        class="hover:text-blue-400 transition-colors" title="Display settings">⚙ Settings</button>
+      <button onclick="doLogout()"
+        class="text-slate-400 hover:text-red-400 transition-colors">Sign out</button>
+    </span>
+  </div>
+</header>
+
+<!-- ── Settings modal ─────────────────────────────────────── -->
+<div id="settings-modal"
+  class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center"
+  onclick="if(event.target===this) closeSettings()">
+  <div class="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-lg mx-4
+              max-h-[80vh] flex flex-col">
+
+    <!-- header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-700 shrink-0">
+      <h2 class="text-sm font-semibold text-slate-100">⚙ Display Settings</h2>
+      <button onclick="closeSettings()"
+        class="text-slate-400 hover:text-white text-xl leading-none transition-colors">✕</button>
+    </div>
+
+    <!-- body -->
+    <div class="overflow-y-auto flex-1 px-6 py-4 space-y-6">
+
+      <div>
+        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Theme</h3>
+        <div class="flex gap-2">
+          <button onclick="setTheme('dark')" id="theme-dark"
+            class="flex-1 py-2 px-3 rounded-lg border border-slate-600 text-sm transition-colors bg-slate-800 text-slate-200">
+            🌙 Dark
+          </button>
+          <button onclick="setTheme('light')" id="theme-light"
+            class="flex-1 py-2 px-3 rounded-lg border border-slate-600 text-sm transition-colors text-slate-400">
+            ☀️ Light
+          </button>
+        </div>
+      </div>
+
+      <!-- One section per configured dimension (built in buildSettingsModal) -->
+      <div id="settings-dim-sections" class="space-y-5"></div>
+
+      <div>
+        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Filters</h3>
+        <label class="flex items-center gap-3 cursor-pointer select-none">
+          <div class="relative">
+            <input id="toggle-date-filter" type="checkbox" class="sr-only peer"
+              onchange="toggleDateFilter(this.checked)" />
+            <div class="w-9 h-5 bg-slate-700 peer-checked:bg-blue-600 rounded-full transition-colors"></div>
+            <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4"></div>
+          </div>
+          <span class="text-sm text-slate-300">Date range filter</span>
+        </label>
+      </div>
+
+      <div>
+        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">Pass rate</h3>
+        <label class="flex items-center gap-3 cursor-pointer select-none">
+          <div class="relative">
+            <input id="toggle-exclude-skipped" type="checkbox" class="sr-only peer"
+              onchange="toggleExcludeSkipped(this.checked)" />
+            <div class="w-9 h-5 bg-slate-700 peer-checked:bg-blue-600 rounded-full transition-colors"></div>
+            <div class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform peer-checked:translate-x-4"></div>
+          </div>
+          <span class="text-sm text-slate-300">Exclude skipped from pass rate</span>
+        </label>
+        <p class="text-xs text-slate-500 mt-1.5 ml-12">Drops skipped tests from the denominator across all views.</p>
+      </div>
+
+    </div>
+
+    <!-- footer -->
+    <div class="px-6 py-3 border-t border-slate-700 flex items-center justify-between shrink-0">
+      <span id="settings-status" class="text-xs text-slate-500"></span>
+      <button onclick="closeSettings()"
+        class="text-xs bg-blue-600 hover:bg-blue-500 px-4 py-1.5 rounded text-white transition-colors">
+        Done
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Report modal ────────────────────────────────────────── -->
+<div id="report-modal"
+  class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center"
+  onclick="if(event.target===this) closeReportModal()">
+  <div class="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-2xl mx-4
+              max-h-[85vh] flex flex-col">
+
+    <!-- header -->
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-700 shrink-0">
+      <h2 class="text-sm font-semibold text-slate-100">📄 Generate Test Report</h2>
+      <button onclick="closeReportModal()"
+        class="text-slate-400 hover:text-white text-xl leading-none transition-colors">✕</button>
+    </div>
+
+    <!-- body -->
+    <div class="overflow-y-auto flex-1 px-6 py-4 space-y-4">
+      <!-- version -->
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Version <span class="text-slate-600">(auto-fetched from first selected report if blank)</span></label>
+        <input id="report-version" type="text" placeholder="e.g. SONiC.weekly-2508291800"
+          class="w-full bg-slate-800 border border-slate-600 rounded px-3 py-2 text-sm
+                 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-blue-500" />
+      </div>
+
+      <!-- project list -->
+      <div>
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs text-slate-400">Select projects to include</span>
+          <div class="flex gap-2 text-xs">
+            <button onclick="reportSelectAll(true)"  class="text-blue-400 hover:text-blue-300">All</button>
+            <button onclick="reportSelectAll(false)" class="text-slate-400 hover:text-slate-300">None</button>
+          </div>
+        </div>
+        <div id="report-project-list" class="space-y-1.5 max-h-72 overflow-y-auto pr-1"></div>
+      </div>
+    </div>
+
+    <!-- footer -->
+    <div class="px-6 py-3 border-t border-slate-700 flex items-center justify-between shrink-0">
+      <span id="report-status" class="text-xs text-slate-500"></span>
+      <button onclick="doGenerateReport()"
+        class="text-xs bg-green-700 hover:bg-green-600 px-4 py-1.5 rounded text-white transition-colors">
+        Generate Report
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Report viewer overlay ───────────────────────────────── -->
+<div id="report-viewer" class="hidden fixed inset-0 z-[60] flex flex-col bg-slate-950">
+  <div class="flex items-center justify-between px-4 py-2 bg-slate-900 border-b border-slate-700 shrink-0">
+    <span class="text-xs text-slate-400">Test Report</span>
+    <button onclick="closeReportViewer()"
+      class="text-slate-400 hover:text-white text-sm px-3 py-1 rounded hover:bg-slate-700 transition-colors">
+      ✕ Close
+    </button>
+  </div>
+  <iframe id="report-iframe" class="flex-1 w-full border-0 bg-white"></iframe>
+</div>
+
+<!-- ── Cell detail modal ───────────────────────────────────── -->
+<div id="cell-detail-modal"
+  class="hidden fixed inset-0 z-50 bg-black/60 flex items-center justify-center"
+  onclick="if(event.target===this) closeCellDetail()">
+  <div class="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-2xl mx-4
+              max-h-[80vh] flex flex-col">
+    <div class="flex items-center justify-between px-6 py-4 border-b border-slate-700 shrink-0">
+      <div>
+        <h2 id="cell-detail-title" class="text-sm font-semibold text-slate-100"></h2>
+        <p id="cell-detail-sub" class="text-xs text-slate-400 mt-0.5"></p>
+      </div>
+      <button onclick="closeCellDetail()"
+        class="text-slate-400 hover:text-white text-xl leading-none transition-colors">✕</button>
+    </div>
+    <div id="cell-detail-body" class="overflow-y-auto flex-1 px-6 py-4 text-sm"></div>
+  </div>
+</div>
+
+<!-- ── Login overlay ───────────────────────────────────────── -->
+<div id="login-overlay"
+  class="fixed inset-0 z-50 bg-slate-950/80 flex items-center justify-center">
+  <div class="bg-slate-900 border border-slate-700 rounded-xl shadow-2xl w-full max-w-sm mx-4 p-8">
+    <div class="text-center mb-6">
+      <div class="text-3xl mb-2">⚡</div>
+      <h1 class="text-xl font-bold text-slate-100">Test Dashboard</h1>
+      <p class="text-sm text-slate-400 mt-1">Sign in with your LDAP account</p>
+    </div>
+
+    <form id="login-form" onsubmit="doLogin(event)" class="space-y-4">
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Username</label>
+        <input id="login-username" type="text" autocomplete="username"
+          class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5
+                 text-sm text-slate-100 placeholder-slate-500
+                 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          placeholder="username" />
+      </div>
+      <div>
+        <label class="block text-xs text-slate-400 mb-1">Password</label>
+        <input id="login-password" type="password" autocomplete="current-password"
+          class="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2.5
+                 text-sm text-slate-100 placeholder-slate-500
+                 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
+          placeholder="••••••••" />
+      </div>
+
+      <div id="login-error" class="hidden text-xs text-red-400 bg-red-950/40 border border-red-800
+           rounded-lg px-3 py-2"></div>
+
+      <button type="submit" id="login-btn"
+        class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700
+               text-white text-sm font-medium rounded-lg px-4 py-2.5 transition-colors
+               disabled:opacity-50 disabled:cursor-not-allowed">
+        Sign in
+      </button>
+    </form>
+  </div>
+</div>
+
+<!-- ── Tabs ────────────────────────────────────────────────── -->
+<div class="bg-slate-900 border-b border-slate-700 px-6 flex gap-0">
+  <button id="tab-dashboard" class="tab-btn active-tab" onclick="switchTab('dashboard')">Dashboard</button>
+  <!-- one matrix tab per configured view (built by buildViewTabs) -->
+  <span id="view-tabs" class="contents"></span>
+  <button id="tab-scraper"   class="tab-btn"            onclick="switchTab('scraper')">Scraper</button>
+  <button id="tab-feature-mgmt" class="tab-btn"         onclick="switchTab('feature-mgmt')">Manage Features</button>
+  <button id="tab-config"    class="tab-btn hidden"     onclick="switchTab('config')">Configuration</button>
+  <button id="tab-admin"     class="tab-btn hidden"     onclick="switchTab('admin')">Admin</button>
+</div>
+
+<!-- ── Dashboard view ──────────────────────────────────────── -->
+<div id="dashboard-view">
+
+<!-- ── Filters ─────────────────────────────────────────────── -->
+<div class="bg-slate-900/60 border-b border-slate-800 px-6 py-3 space-y-2">
+
+  <!-- One filter row per configured dimension (built in buildFilters) -->
+  <div id="dim-filter-rows" class="space-y-2"></div>
+
+  <div id="date-filter-row" class="hidden flex flex-wrap items-center gap-2">
+    <span class="text-xs text-slate-500 w-16 shrink-0">Last run</span>
+    <input id="date-from" type="date"
+      class="bg-slate-800 border border-slate-700 rounded px-2 py-0.5 text-xs text-slate-300
+             focus:outline-none focus:border-blue-500 [color-scheme:dark]"
+      title="From" onchange="renderGrid()" />
+    <span class="text-xs text-slate-600">—</span>
+    <input id="date-to" type="date"
+      class="bg-slate-800 border border-slate-700 rounded px-2 py-0.5 text-xs text-slate-300
+             focus:outline-none focus:border-blue-500 [color-scheme:dark]"
+      title="To" onchange="renderGrid()" />
+    <button onclick="document.getElementById('date-from').value='';document.getElementById('date-to').value='';renderGrid();"
+      class="text-xs text-slate-500 hover:text-slate-300 transition-colors" title="Clear dates">✕</button>
+  </div>
+
+  <!-- pass-rate legend -->
+  <div class="flex items-center gap-3 ml-auto text-[10px] text-slate-500 select-none">
+    <span class="font-medium text-slate-600">Pass rate:</span>
+    <span><span style="color:#22c55e">●</span> ≥90%</span>
+    <span><span style="color:#eab308">●</span> ≥70%</span>
+    <span><span style="color:#f97316">●</span> ≥50%</span>
+    <span><span style="color:#ef4444">●</span> &lt;50%</span>
+  </div>
+
+</div>
+
+<!-- ── Cards grid ──────────────────────────────────────────── -->
+<main id="grid" class="p-6 grid gap-4"
+  style="grid-template-columns: repeat(auto-fill, minmax(260px, 1fr))">
+  <!-- cards injected by JS -->
+</main>
+
+<div id="empty-msg" class="hidden text-center py-20 text-slate-500 text-sm">
+  No projects match the current filters.
+</div>
+
+</div><!-- /#dashboard-view -->
+
+<!-- ── Matrix view (shared by every configured view/tab) ────── -->
+<div id="matrix-view" class="hidden">
+
+  <!-- toolbar -->
+  <div class="bg-slate-900/60 border-b border-slate-800 px-6 py-3 flex flex-wrap items-center gap-x-4 gap-y-2">
+    <div id="matrix-pill-rows" class="flex flex-wrap items-center gap-x-4 gap-y-1.5"></div>
+    <div class="ml-auto flex items-center gap-2">
+      <button onclick="loadMatrix(true)"
+        class="text-xs text-slate-400 hover:text-blue-400 transition-colors">↺ Refresh</button>
+      <button onclick="switchTab('feature-mgmt', activeView() && activeView().scope)"
+        class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded transition-colors">
+        ⚙ Manage Features
+      </button>
+    </div>
+  </div>
+
+  <!-- matrix -->
+  <div class="p-6 overflow-x-auto">
+    <div id="matrix-container">
+      <p class="text-slate-500 text-sm">Select a matrix tab to load.</p>
+    </div>
+  </div>
+
+</div><!-- /#matrix-view -->
+
+<!-- ── Admin view ─────────────────────────────────────────────── -->
+<div id="admin-view" class="hidden flex h-[calc(100vh-6.5rem)]">
+
+  <!-- Left sidebar: table list -->
+  <div class="w-56 shrink-0 bg-slate-900 border-r border-slate-800 overflow-y-auto flex flex-col">
+    <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+      <span class="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">Tables</span>
+      <button onclick="adminClearAll()"
+        class="text-[10px] text-red-500 hover:text-red-400 transition-colors">Clear all</button>
+    </div>
+    <div id="admin-table-list" class="flex-1 overflow-y-auto py-1">
+      <div class="px-4 py-6 text-xs text-slate-500">Loading…</div>
+    </div>
+  </div>
+
+  <!-- Right panel: table data -->
+  <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+
+    <!-- toolbar -->
+    <div class="bg-slate-900/60 border-b border-slate-800 px-4 py-2 flex items-center gap-3 shrink-0">
+      <span id="admin-table-title" class="text-sm font-semibold text-slate-200">—</span>
+      <span id="admin-row-count" class="text-xs text-slate-500"></span>
+      <div class="flex-1"></div>
+      <input id="admin-search" type="text" placeholder="Search…"
+        oninput="adminSearch()"
+        class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200
+               placeholder-slate-500 focus:outline-none focus:border-blue-500 w-48"/>
+      <button onclick="adminPrev()" id="admin-prev"
+        class="px-2 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded border border-slate-700
+               disabled:opacity-30 disabled:cursor-default transition-colors">← Prev</button>
+      <button onclick="adminNext()" id="admin-next"
+        class="px-2 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded border border-slate-700
+               disabled:opacity-30 disabled:cursor-default transition-colors">Next →</button>
+      <span id="admin-page-info" class="text-[10px] text-slate-500 w-28 text-right"></span>
+      <div class="w-px h-5 bg-slate-700 mx-1"></div>
+      <button onclick="adminClearTable()"
+        class="px-2 py-1 text-xs bg-red-950 hover:bg-red-900 text-red-400 hover:text-red-300
+               rounded border border-red-900 transition-colors">🗑 Clear table</button>
+    </div>
+
+    <!-- table content -->
+    <div class="flex-1 overflow-auto">
+      <div id="admin-table-content" class="min-w-full">
+        <div class="flex items-center justify-center h-40 text-slate-500 text-sm">
+          Select a table on the left.
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div><!-- /#admin-view -->
+
+<!-- ── Configuration view (admin only) ───────────────────────── -->
+<div id="config-view" class="hidden h-[calc(100vh-6.5rem)] overflow-hidden flex flex-col">
+
+  <!-- toolbar -->
+  <div class="bg-slate-900/60 border-b border-slate-800 px-6 py-2 flex items-center gap-3 shrink-0">
+    <span class="text-sm font-semibold text-slate-200">Parsing configuration</span>
+    <span id="cfg-version" class="text-[10px] text-slate-500"></span>
+    <div class="flex-1"></div>
+    <span id="cfg-status" class="text-xs"></span>
+    <button onclick="cfgLoadPreset()"
+      class="px-2 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 transition-colors">Load SONiC preset</button>
+    <button onclick="cfgExport()"
+      class="px-2 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 transition-colors">Export</button>
+    <label class="px-2 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 transition-colors cursor-pointer">
+      Import
+      <input id="cfg-import-file" type="file" accept="application/json" class="hidden" onchange="cfgImport(event)"/>
+    </label>
+    <button onclick="loadConfigEditor()"
+      class="px-2 py-1 text-xs bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 transition-colors">Reload</button>
+    <button onclick="cfgSave()"
+      class="px-3 py-1 text-xs bg-blue-600 hover:bg-blue-500 text-white rounded transition-colors">Save</button>
+  </div>
+
+  <div class="flex-1 overflow-y-auto px-6 py-4 space-y-6 min-w-0">
+
+    <!-- Projects (primary) -->
+    <section>
+      <div class="flex items-center gap-3 mb-2">
+        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Projects</h3>
+        <span id="cfg-proj-summary" class="text-[10px] text-slate-500"></span>
+        <div class="flex-1"></div>
+        <input id="cfg-proj-search" type="text" placeholder="Filter projects…" oninput="cfgRenderProjects(this.value)"
+          class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-blue-500 w-56"/>
+      </div>
+      <p class="text-[10px] text-slate-600 mb-2">Assign dimensions directly to a project. Edited rows are <span class="text-emerald-400">mapped</span> and take precedence over patterns; untouched rows fall back to <span class="text-blue-400">patterns</span> or the <span class="text-amber-500">default</span>.</p>
+      <div id="cfg-projects" class="border border-slate-800 rounded overflow-hidden"></div>
+    </section>
+
+    <!-- Advanced (collapsed) -->
+    <section>
+      <button id="cfg-adv-toggle" onclick="cfgToggleAdvanced()"
+        class="text-xs font-semibold text-slate-400 hover:text-slate-200 transition-colors">▸ Advanced — dimensions, patterns &amp; labels</button>
+      <div id="cfg-advanced" class="hidden mt-3 space-y-6">
+
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <h4 class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Dimensions</h4>
+            <button onclick="cfgAddDimension()" class="text-[11px] text-blue-400 hover:text-blue-300">+ add</button>
+          </div>
+          <div id="cfg-dimensions" class="space-y-1.5"></div>
+        </div>
+
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <h4 class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Patterns</h4>
+            <button onclick="cfgAddPattern()" class="text-[11px] text-blue-400 hover:text-blue-300">+ add</button>
+            <span class="text-[10px] text-slate-600">regex, first match wins · group_map / constants / transforms are JSON</span>
+          </div>
+          <div id="cfg-patterns" class="space-y-3"></div>
+        </div>
+
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <h4 class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Labels</h4>
+            <span class="text-[10px] text-slate-600">display names per dimension value</span>
+          </div>
+          <div id="cfg-labels" class="space-y-3"></div>
+        </div>
+
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <h4 class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Views (feature matrices)</h4>
+            <button onclick="cfgAddView()" class="text-[11px] text-blue-400 hover:text-blue-300">+ add</button>
+            <span class="text-[10px] text-slate-600">name · feature scope · column filter over dimensions</span>
+          </div>
+          <div id="cfg-views" class="space-y-3"></div>
+        </div>
+
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <h4 class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Auto-map rules</h4>
+            <button onclick="cfgAddAutomap()" class="text-[11px] text-blue-400 hover:text-blue-300">+ add</button>
+            <span class="text-[10px] text-slate-600">suite name → feature (used by the ✨ Auto-map button)</span>
+          </div>
+          <div id="cfg-automap" class="space-y-1"></div>
+        </div>
+
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <h4 class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Metrics</h4>
+            <button onclick="cfgAddMetric()" class="text-[11px] text-blue-400 hover:text-blue-300">+ add</button>
+            <span class="text-[10px] text-slate-600">scraped from a test's attachment · each value-key becomes a chart series (first key = tile sparkline / runs column)</span>
+          </div>
+          <div id="cfg-metrics" class="space-y-3"></div>
+        </div>
+
+        <div>
+          <div class="flex items-center gap-2 mb-2">
+            <h4 class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">Report</h4>
+            <span class="text-[10px] text-slate-600">HTML report branding, image-server URL, version parsing and known-issue keywords · lists/maps are JSON</span>
+          </div>
+          <div id="cfg-report" class="grid grid-cols-1 md:grid-cols-2 gap-2"></div>
+        </div>
+      </div>
+    </section>
+  </div>
+</div><!-- /#config-view -->
+
+<!-- ── Admin clear confirmation modal ────────────────────────── -->
+<div id="admin-clear-modal"
+  class="hidden fixed inset-0 z-50 bg-black/70 flex items-center justify-center"
+  onclick="if(event.target===this) closeAdminClearModal()">
+  <div class="bg-slate-900 border border-red-800 rounded-xl shadow-2xl w-full max-w-sm mx-4 p-6">
+    <h2 class="text-sm font-semibold text-red-400 mb-2" id="admin-clear-title">Clear table?</h2>
+    <p class="text-xs text-slate-400 mb-6" id="admin-clear-body"></p>
+    <div class="flex gap-3 justify-end">
+      <button onclick="closeAdminClearModal()"
+        class="px-3 py-1.5 text-xs bg-slate-800 hover:bg-slate-700 rounded border border-slate-700 transition-colors">
+        Cancel
+      </button>
+      <button id="admin-clear-confirm-btn"
+        class="px-3 py-1.5 text-xs bg-red-700 hover:bg-red-600 text-white rounded transition-colors">
+        Delete all rows
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ── Scraper Summary view ───────────────────────────────────── -->
+<div id="scraper-view" class="hidden overflow-auto h-[calc(100vh-6.5rem)]">
+
+  <!-- toolbar -->
+  <div class="bg-slate-900/60 border-b border-slate-800 px-6 py-3 flex items-center gap-4">
+    <span class="text-sm font-semibold text-slate-200">Scraper Summary</span>
+    <span class="text-xs text-slate-500">Allure total = expected from report &nbsp;·&nbsp; Stored = rows in test_results</span>
+    <button onclick="loadScraperSummary()"
+      class="ml-auto text-xs text-slate-400 hover:text-blue-400 transition-colors">↺ Refresh</button>
+  </div>
+
+  <!-- content -->
+  <div id="scraper-content" class="px-6 py-4">
+    <div class="text-xs text-slate-500">Loading…</div>
+  </div>
+
+</div><!-- /#scraper-view -->
+
+<!-- ── Feature management view ──────────────────────────────── -->
+<div id="feature-mgmt-view" class="hidden flex flex-col h-[calc(100vh-6.5rem)]">
+
+  <!-- toolbar -->
+  <div class="bg-slate-900/60 border-b border-slate-800 px-6 py-3 flex items-center gap-3 shrink-0 flex-wrap">
+    <!-- scope toggle: one button per distinct view scope (built by switchFmgmtScope) -->
+    <div id="fmgmt-scopes" class="flex rounded overflow-hidden border border-slate-700 text-xs"></div>
+
+    <button id="guess-btn" onclick="guessAllMappings()"
+      class="text-xs bg-purple-700 hover:bg-purple-600 text-white px-3 py-1.5 rounded transition-colors"
+      title="Auto-map test cases based on suite name heuristics">
+      ✨ Auto-map
+    </button>
+
+    <button id="seed-btn" onclick="seedFromSuites()"
+      class="text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1.5 rounded transition-colors"
+      title="Create one feature per test suite found in this scope's projects">
+      🌱 Seed from suites
+    </button>
+
+    <button onclick="exportFeatures()"
+      class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded transition-colors"
+      title="Download features and mappings as JSON">
+      ↓ Export
+    </button>
+    <label class="text-xs bg-slate-700 hover:bg-slate-600 text-slate-200 px-3 py-1.5 rounded transition-colors cursor-pointer"
+      title="Import features and mappings from JSON">
+      ↑ Import
+      <input type="file" accept=".json" class="hidden" onchange="importFeatures(event)" />
+    </label>
+    <span id="fmgmt-import-status" class="text-xs text-slate-400 hidden"></span>
+
+    <!-- new feature form -->
+    <div class="flex gap-2 ml-auto flex-wrap">
+      <input id="new-feature-name" type="text" placeholder="Feature name"
+        class="bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-xs text-slate-100
+               focus:outline-none focus:border-blue-500 placeholder-slate-500 w-48" />
+      <input id="new-feature-group" type="text" placeholder="Group (e.g. Layer 3)"
+        class="bg-slate-800 border border-slate-600 rounded px-3 py-1.5 text-xs text-slate-100
+               focus:outline-none focus:border-blue-500 placeholder-slate-500 w-36" />
+      <button onclick="addNewFeature()"
+        class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3 py-1.5 rounded">Add</button>
+      <p id="new-feature-err" class="text-xs text-red-400 hidden self-center"></p>
+    </div>
+  </div>
+
+  <!-- feature list -->
+  <div id="feature-list" class="flex-1 overflow-y-auto px-6 py-4"></div>
+
+</div><!-- /#feature-mgmt-view -->
+
+<!-- shared autocomplete dropdown for test-name inputs -->
+<div id="test-ac-dropdown"
+  class="hidden fixed z-50 bg-slate-800 border border-slate-600 rounded shadow-xl
+         overflow-y-auto max-h-52 text-xs"
+  style="min-width:200px"></div>
+
+<!-- ── Detail panel (right drawer) ────────────────────────── -->
+<div id="detail-panel"
+  class="fixed top-0 right-0 h-full w-full md:w-[820px] xl:w-[920px] bg-slate-900 border-l border-slate-700
+         shadow-2xl z-40 overflow-y-auto flex flex-col"
+  style="transform: translateX(100%)">
+
+  <!-- panel header -->
+  <div class="sticky top-0 bg-slate-900 border-b border-slate-700 px-5 py-3 flex items-center justify-between z-10">
+    <div class="min-w-0 flex-1">
+      <div class="flex items-center gap-2">
+        <h2 id="panel-title" class="text-base font-bold text-slate-100 truncate"></h2>
+        <span id="panel-pass-badge" class="shrink-0 text-xs font-bold px-2 py-0.5 rounded-full hidden"></span>
+      </div>
+      <p id="panel-subtitle" class="text-xs text-slate-400 mt-0.5"></p>
+      <p id="panel-project-id" class="text-[10px] text-slate-600 font-mono mt-0.5 truncate"></p>
+    </div>
+    <div class="flex items-center gap-3 ml-4 shrink-0">
+      <a id="panel-allure-link" href="#" target="_blank"
+        class="text-xs bg-blue-600 hover:bg-blue-500 px-3 py-1 rounded text-white transition-colors">
+        Open Allure ↗
+      </a>
+      <button onclick="closeDetail()"
+        class="text-slate-400 hover:text-white text-xl leading-none transition-colors">✕</button>
+    </div>
+  </div>
+
+  <!-- latest run stats row -->
+  <div id="panel-stats" class="px-5 pt-4 pb-3 grid grid-cols-5 gap-3"></div>
+  <!-- pass/fail bar -->
+  <div id="panel-bar" class="flex mx-5 mb-3 rounded overflow-hidden border-b border-slate-800" style="height:6px"></div>
+
+  <!-- detail tabs -->
+  <div class="flex border-b border-slate-700">
+    <button type="button" id="detail-tab-overview" onclick="switchDetailTab('overview')"
+      class="px-4 py-2.5 text-sm font-medium border-b-2 border-blue-500 text-blue-400 bg-slate-800/50">
+      Overview
+    </button>
+    <button type="button" id="detail-tab-new-fails" onclick="switchDetailTab('new-fails')"
+      class="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/30">
+      New Fails
+    </button>
+    <button type="button" id="detail-tab-all-fails" onclick="switchDetailTab('all-fails')"
+      class="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/30">
+      All Fails
+    </button>
+    <button type="button" id="detail-tab-skipped" onclick="switchDetailTab('skipped')"
+      class="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/30">
+      Skipped
+    </button>
+    <button type="button" id="detail-tab-jira" onclick="switchDetailTab('jira')"
+      class="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/30">
+      Jira
+    </button>
+    <button type="button" id="detail-tab-cli-time" onclick="switchDetailTab('cli-time')"
+      class="px-4 py-2.5 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 hover:bg-slate-800/30">
+      CLI Time
+    </button>
+  </div>
+
+  <!-- Overview tab -->
+  <div id="detail-overview" class="px-5 py-4 space-y-6 flex-1 overflow-y-auto">
+
+    <div>
+      <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+        Result Counts
+      </h3>
+      <div class="relative h-52">
+        <canvas id="history-chart"></canvas>
+      </div>
+    </div>
+
+    <div>
+      <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+        Duration (hours)
+      </h3>
+      <div class="relative h-40">
+        <canvas id="duration-chart"></canvas>
+      </div>
+    </div>
+
+    <!-- one chart per configured metric, built dynamically -->
+    <div id="metric-charts" class="space-y-6"></div>
+
+    <!-- runs table -->
+    <div>
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider">
+          Recent Runs
+        </h3>
+        <button id="compare-runs-btn" onclick="doCompareRuns()"
+          class="hidden text-xs bg-purple-700 hover:bg-purple-600 px-3 py-1 rounded
+                 text-white transition-colors disabled:opacity-50">
+          📊 Compare
+        </button>
+      </div>
+      <div class="overflow-x-auto rounded border border-slate-800">
+        <table class="w-full text-xs">
+          <thead class="bg-slate-800 text-slate-400">
+            <tr>
+              <th class="px-2 py-2 w-6"></th>
+              <th class="px-2 py-2 text-left">#</th>
+              <th class="px-2 py-2 text-left">Date</th>
+              <th class="px-2 py-2 text-right">Total</th>
+              <th class="px-2 py-2 text-right text-green-400">Pass</th>
+              <th class="px-2 py-2 text-right text-red-400">Fail</th>
+              <th class="px-2 py-2 text-right text-orange-400">Brk</th>
+              <th class="px-2 py-2 text-right text-slate-400">Skip</th>
+              <th class="px-2 py-2 text-right">Pass%</th>
+              <th class="px-2 py-2 text-right">Duration</th>
+              <th id="runs-metric-th" class="px-2 py-2 text-right text-purple-400">Metric</th>
+            </tr>
+          </thead>
+          <tbody id="runs-table-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- New Fails tab -->
+  <div id="detail-new-fails" class="hidden flex-1 flex flex-col overflow-hidden">
+    <div class="px-5 py-3 border-b border-slate-800">
+      <p class="text-xs text-slate-400">Click a run to load new fails vs previous run (test name and fail reason).</p>
+    </div>
+    <div id="new-fails-list" class="flex-1 overflow-y-auto px-5 py-3 space-y-2"></div>
+  </div>
+
+  <!-- All Fails tab -->
+  <div id="detail-all-fails" class="hidden flex-1 flex flex-col overflow-hidden">
+    <div class="px-5 py-3 border-b border-slate-800">
+      <p class="text-xs text-slate-400">Click a run to load all failed/broken tests with grouping.</p>
+    </div>
+    <div id="all-fails-list" class="flex-1 overflow-y-auto px-5 py-3 space-y-2"></div>
+  </div>
+
+  <!-- Skipped tab -->
+  <div id="detail-skipped" class="hidden flex-1 flex flex-col overflow-hidden">
+    <div class="px-5 py-3 border-b border-slate-800">
+      <p class="text-xs text-slate-400">Click a run to load skipped tests and their skip reasons.</p>
+    </div>
+    <div id="skipped-list" class="flex-1 overflow-y-auto px-5 py-3 space-y-2"></div>
+  </div>
+
+  <!-- Jira tab -->
+  <div id="detail-jira" class="hidden flex-1 flex flex-col overflow-hidden">
+    <div class="px-5 py-3 border-b border-slate-800">
+      <p class="text-xs text-slate-400">Jira issues referenced in skipped, xfail, failed, and broken test reasons, grouped by ticket.</p>
+    </div>
+    <div id="jira-list" class="flex-1 overflow-y-auto px-5 py-3 space-y-2"></div>
+  </div>
+
+  <!-- CLI Time tab -->
+  <div id="detail-cli-time" class="hidden flex-1 flex flex-col overflow-hidden">
+    <div class="px-5 py-3 border-b border-slate-800">
+      <p class="text-xs text-slate-400">
+        Top-5 slowest CLI commands per run — scraped from
+        <code class="text-slate-300">test_gather_execution_time</code>'s Execution Time Log attachment.
+      </p>
+    </div>
+    <div class="flex-1 overflow-y-auto px-5 py-4">
+      <div id="cli-time-empty" class="hidden text-slate-400 text-sm">
+        No CLI execution-time data for this project.
+      </div>
+      <div id="cli-time-section" class="hidden">
+        <div class="relative h-80">
+          <canvas id="cli-chart"></canvas>
+        </div>
+        <div class="mt-6">
+          <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+            Top-5 per Run (newest first)
+          </h3>
+          <div class="rounded border border-slate-800">
+            <table class="w-full text-xs table-fixed">
+              <colgroup>
+                <col class="w-16"><!-- Run -->
+                <col class="w-28"><!-- Date -->
+                <col class="w-8"><!-- # -->
+                <col class="w-20"><!-- Duration -->
+                <col class="w-64"><!-- Command -->
+                <col><!-- Test (remaining) -->
+              </colgroup>
+              <thead class="bg-slate-800 text-slate-400 sticky top-0">
+                <tr>
+                  <th class="px-2 py-2 text-left">Run</th>
+                  <th class="px-2 py-2 text-left">Date</th>
+                  <th class="px-2 py-2 text-right">#</th>
+                  <th class="px-2 py-2 text-right">Duration</th>
+                  <th class="px-2 py-2 text-left">Command</th>
+                  <th class="px-2 py-2 text-left">Test</th>
+                </tr>
+              </thead>
+              <tbody id="cli-top-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- backdrop -->
+<div id="backdrop" class="hidden fixed inset-0 bg-black/50 z-30" onclick="closeDetail()"></div>
+
+<!-- ── JavaScript ──────────────────────────────────────────── -->
+<script>
+
+// ── State ───────────────────────────────────────────────────
+let allProjects  = [];
+let config       = {};
+let userSettings = { hidden: {}, show_date_filter: false };
+let allFeatures  = [];
+
+// Matrix views come from config.views; one tab each, all sharing #matrix-view.
+let _activeViewName = null;
+let _viewState = {};   // view name -> { data, filter: {dimKey:'all'|value}, runOverrides: {pid: run} }
+function configViews() { return (config && config.views) || []; }
+function activeView() {
+  const views = configViews();
+  return views.find(v => v.name === _activeViewName) || views[0] || null;
+}
+function viewState(name) {
+  return _viewState[name] || (_viewState[name] = { data: null, filter: {}, runOverrides: {} });
+}
+function invalidateMatrix() {
+  Object.values(_viewState).forEach(s => { s.data = null; });
+}
+
+let _dimFilter = {};   // { dimensionKey: 'all' | value } for the Dashboard tab
+
+// Configured dimensions ([{key,label}]) from /api/config; helpers below.
+function cfgDims() { return (config && config.dimensions) || []; }
+function dimHidden(dimKey) { return (userSettings.hidden && userSettings.hidden[dimKey]) || []; }
+function projDim(p, dimKey) { return (p.dimensions && p.dimensions[dimKey]) ?? ''; }
+function projDimLabel(p, dimKey) { return (p.labels && p.labels[dimKey]) || projDim(p, dimKey); }
+// The dimension whose value is the card/panel title (role='title'); falls back to last.
+function titleDim() { const ds = cfgDims(); return ds.find(d => d.role === 'title') || ds[ds.length - 1] || null; }
+function badgeDims() { const t = titleDim(); return cfgDims().filter(d => !t || d.key !== t.key); }
+function cardTitle(p) { const t = titleDim(); return t ? (projDimLabel(p, t.key) || p.id) : p.id; }
+
+let histChart  = null;
+let durChart   = null;
+let metricCharts = [];   // one Chart per configured metric
+let cliChart   = null;
+let _detailCliTop = [];
+
+let _detailProjectId   = null;
+let _detailRuns        = [];
+let _detailNewCounts   = {};  // report_number -> { new_fail_count, new_pass_count }
+let _detailNewFailsCache = {};  // report_number -> { new_failed_tests, new_fails_note } (pre-loaded in background)
+let _detailSelectedRuns = [];   // up to 2 report numbers
+
+// ── Chart defaults ──────────────────────────────────────────
+Chart.defaults.color = '#94a3b8';
+Chart.defaults.borderColor = '#1e293b';
+Chart.defaults.font.family = 'system-ui, sans-serif';
+Chart.defaults.font.size   = 11;
+
+// ── Auth ─────────────────────────────────────────────────────
+async function checkAuth() {
+  const r = await fetch('/api/auth/me');
+  if (r.ok) {
+    const { username, is_admin } = await r.json();
+    showUser(username, is_admin);
+    return true;
+  }
+  return false;
+}
+
+function showUser(username, isAdmin) {
+  document.getElementById('login-overlay').classList.add('hidden');
+  const info = document.getElementById('user-info');
+  info.classList.remove('hidden');
+  info.classList.add('flex');
+  document.getElementById('username-label').textContent = username;
+  // Show Admin / Configuration tabs only for admins
+  document.getElementById('tab-admin').classList.toggle('hidden', !isAdmin);
+  document.getElementById('tab-config').classList.toggle('hidden', !isAdmin);
+}
+
+async function doLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('login-btn');
+  const err = document.getElementById('login-error');
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+
+  err.classList.add('hidden');
+  btn.disabled = true;
+  btn.textContent = 'Signing in…';
+
+  try {
+    const r = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    if (r.ok) {
+      // Re-fetch identity so admin-gated tabs (Admin / Configuration) appear
+      // immediately, without needing a page reload.
+      await checkAuth();
+      await loadDashboard();
+    } else {
+      const data = await r.json().catch(() => ({}));
+      err.textContent = data.detail || 'Login failed';
+      err.classList.remove('hidden');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sign in';
+  }
+}
+
+async function doLogout() {
+  await fetch('/api/auth/logout', { method: 'POST' });
+  document.getElementById('login-overlay').classList.remove('hidden');
+  document.getElementById('user-info').classList.add('hidden');
+  document.getElementById('user-info').classList.remove('flex');
+  document.getElementById('login-password').value = '';
+}
+
+// ── Tab switching ────────────────────────────────────────────
+// tab='matrix' shows the shared matrix view; arg = the view name to activate.
+// tab='feature-mgmt' takes an optional scope as arg.
+function switchTab(tab, arg) {
+  const tabs = ['dashboard', 'matrix', 'admin', 'scraper', 'feature-mgmt', 'config'];
+  tabs.forEach(t => {
+    document.getElementById(`${t}-view`).classList.toggle('hidden', t !== tab);
+    const btn = document.getElementById(`tab-${t}`);
+    if (btn) btn.classList.toggle('active-tab', t === tab);
+  });
+  if (tab === 'matrix') {
+    const views = configViews();
+    _activeViewName = (arg && views.some(v => v.name === arg)) ? arg
+                      : (activeView() ? activeView().name : null);
+  }
+  _updateViewTabActive(tab === 'matrix');
+  if (tab === 'matrix') {
+    buildMatrixPills();
+    loadMatrix();
+  }
+  if (tab === 'admin') {
+    loadAdminTables();
+  }
+  if (tab === 'scraper') {
+    loadScraperSummary();
+  }
+  if (tab === 'feature-mgmt') {
+    switchFmgmtScope(arg || _panelScope || '');
+  }
+  if (tab === 'config') {
+    loadConfigEditor();
+  }
+}
+
+// One tab button per configured view, inserted after the Dashboard tab.
+function buildViewTabs() {
+  const holder = document.getElementById('view-tabs');
+  if (!holder) return;
+  holder.innerHTML = '';
+  configViews().forEach(v => {
+    const b = document.createElement('button');
+    b.className = 'tab-btn';
+    b.dataset.view = v.name;
+    b.textContent = v.name;
+    b.onclick = () => switchTab('matrix', v.name);
+    holder.appendChild(b);
+  });
+}
+
+function _updateViewTabActive(matrixActive) {
+  document.querySelectorAll('#view-tabs [data-view]').forEach(b => {
+    b.classList.toggle('active-tab', matrixActive && b.dataset.view === _activeViewName);
+  });
+}
+
+// ── Feature Matrix ───────────────────────────────────────────
+// Generic column-filter pills for a matrix view: one pill row per badge
+// dimension (non-title), driven by the projects in that view.
+function buildViewPills(containerId, projects, filterState, onChange) {
+  const cont = document.getElementById(containerId);
+  if (!cont) return;
+  cont.innerHTML = '';
+  badgeDims().forEach(dim => {
+    const key = dim.key;
+    const values = unique(projects.map(p => projDim(p, key)).filter(v => v !== ''));
+    if (filterState[key] && filterState[key] !== 'all' && !values.includes(filterState[key]))
+      filterState[key] = 'all';
+
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-1.5';
+    const lbl = document.createElement('span');
+    lbl.className = 'text-xs text-slate-500 shrink-0';
+    lbl.textContent = dim.label || key;
+    const pills = document.createElement('div');
+    pills.className = 'flex gap-1.5 flex-wrap';
+    row.appendChild(lbl); row.appendChild(pills);
+    cont.appendChild(row);
+
+    const labelFor = v => { const p = projects.find(pp => projDim(pp, key) === v); return p ? projDimLabel(p, key) : v; };
+    const mk = (val, label) => {
+      const b = document.createElement('button');
+      b.className = 'pill text-xs px-3 py-1 rounded-full border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 transition-colors';
+      b.textContent = label;
+      const active = (filterState[key] || 'all') === val;
+      if (active) b.classList.add('active');
+      b.onclick = () => { filterState[key] = active ? 'all' : val; onChange(); };
+      pills.appendChild(b);
+    };
+    mk('all', 'All');
+    values.forEach(v => mk(v, labelFor(v)));
+  });
+}
+
+function buildMatrixPills() {
+  const view = activeView();
+  if (!view) return;
+  const st = viewState(view.name);
+  // Columns come scoped from the backend (the view's filter); use them once loaded.
+  const projects = st.data ? st.data.platforms : visibleProjects();
+  buildViewPills('matrix-pill-rows', projects, st.filter,
+    () => { buildMatrixPills(); renderMatrix(); });
+}
+
+async function loadMatrix(forceRefresh = false) {
+  const box = document.getElementById('matrix-container');
+  const view = activeView();
+  if (!view) {
+    box.innerHTML = '<p class="text-slate-500 text-sm py-6">No views configured — add one in Configuration → Advanced → Views.</p>';
+    return;
+  }
+  const st = viewState(view.name);
+  if (!st.data || forceRefresh) {
+    box.innerHTML = '<p class="text-slate-500 text-sm py-6">Loading…</p>';
+    const params = new URLSearchParams({ scope: view.scope });
+    if (Object.keys(st.runOverrides).length)
+      params.set('run_overrides', JSON.stringify(st.runOverrides));
+    const r = await fetch('/api/feature-status?' + params);
+    if (!r.ok) { box.innerHTML = '<p class="text-red-400 text-sm py-6">Failed to load feature status.</p>'; return; }
+    st.data = await r.json();
+    buildMatrixPills(); // rebuild pills now that we have real platform data
+  }
+  renderMatrix();
+}
+
+// True if no dimension value of p is hidden in user settings.
+function notHidden(p) {
+  return cfgDims().every(d => !dimHidden(d.key).includes(projDim(p, d.key)));
+}
+// True if p passes a view's column pill filter.
+function passesPills(p, filterState) {
+  return badgeDims().every(d => {
+    const sel = filterState[d.key] || 'all';
+    return sel === 'all' || projDim(p, d.key) === sel;
+  });
+}
+
+function renderMatrix() {
+  const view = activeView();
+  if (!view) return;
+  const st = viewState(view.name);
+  // Columns are already scoped to the view by the backend; pills + hidden refine.
+  _renderMatrix(st.data, 'matrix-container',
+    p => passesPills(p, st.filter) && notHidden(p));
+}
+
+function _renderMatrix(data, containerId, platformFilter) {
+  if (!data) return;
+  const { platforms, features, matrix } = data;
+
+  const vis = platforms.filter(platformFilter);
+
+  if (!vis.length || !features.length) {
+    const hint = !features.length
+      ? 'No features in this view yet — use <strong class="text-slate-300">Manage Features</strong> to add or seed them.'
+      : 'No data. Run the scraper first.';
+    document.getElementById(containerId).innerHTML =
+      `<p class="text-slate-500 text-sm py-10 text-center">${hint}</p>`;
+    return;
+  }
+
+  // Column headers: label + variant badge + run selector dropdown
+  const fmtRunLabel = r => {
+    const parts = [`#${r.run}`];
+    if (r.start_ms) {
+      const d = new Date(r.start_ms);
+      parts.push(d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: '2-digit' }));
+    }
+    if (r.build_version) parts.push(r.build_version);
+    if (r.total != null) parts.push(`${r.total} tests`);
+    return parts.join(' · ');
+  };
+  const colHead = p => {
+    const escapedPid = p.project_id.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+    const runSel = p.available_runs && p.available_runs.length > 0
+      ? `<select class="mt-1 bg-slate-800 border border-slate-600 rounded px-1 py-0.5 text-[10px] text-slate-400 w-full cursor-pointer"
+           onclick="event.stopPropagation()"
+           onchange="changeColumnRun('${escapedPid}', parseInt(this.value), '${containerId}')">
+          ${p.available_runs.map(r =>
+            `<option value="${r.run}"${r.run === p.selected_run ? ' selected' : ''}>${fmtRunLabel(r)}</option>`
+          ).join('')}
+         </select>`
+      : (p.selected_run ? `<span class="block text-center text-[10px] text-slate-600 mt-0.5">#${p.selected_run}</span>` : '');
+    const allureUrl = config.allure_base_url && p.selected_run
+      ? `${config.allure_base_url}/projects/${p.project_id}/reports/${p.selected_run}/index.html`
+      : null;
+    const allureBtn = allureUrl
+      ? `<a href="${allureUrl}" target="_blank" onclick="event.stopPropagation()"
+           class="mt-1 block text-center text-[10px] text-blue-400 hover:text-blue-300 hover:underline leading-tight">
+           ↗ Open Allure
+         </a>`
+      : '';
+    const subtitle = badgeDims().map(d => projDimLabel(p, d.key)).filter(Boolean).join(' · ');
+    return `<span class="block">${cardTitle(p)}</span>` +
+           `<span class="block text-slate-500 font-normal">${subtitle}</span>` +
+           runSel + allureBtn;
+  };
+
+  // Group features by group
+  const groups = {};
+  features.forEach(f => { const g = f.feature_group || 'Other'; (groups[g] = groups[g] || []).push(f); });
+
+  let html = `<table class="w-full text-xs border-collapse">
+    <thead class="bg-slate-800 text-slate-400 sticky top-0 z-10">
+      <tr>
+        <th class="px-3 py-2 text-left font-medium w-36">Group</th>
+        <th class="px-3 py-2 text-left font-medium w-44">Feature</th>
+        ${vis.map(p => `<th data-hdr-pid="${p.project_id}" data-hdr-ctr="${containerId}" class="px-2 py-2 text-center font-medium min-w-[100px] leading-tight">${colHead(p)}</th>`).join('')}
+      </tr>
+    </thead><tbody>`;
+
+  Object.entries(groups).forEach(([group, gFeatures]) => {
+    gFeatures.forEach((f, fi) => {
+      const row = matrix[String(f.id)] || {};
+      html += `<tr class="border-t border-slate-800 hover:bg-slate-800/30">`;
+      if (fi === 0)
+        html += `<td class="px-3 py-2 text-slate-400 font-semibold align-top" rowspan="${gFeatures.length}">${group}</td>`;
+      html += `<td class="px-3 py-2 text-slate-200">
+        ${f.name}${f.mapped_count === 0 ? ' <span class="text-slate-600">(no mapping)</span>' : ''}
+      </td>`;
+      vis.forEach(p => {
+        const cell = row[p.project_id];
+        const attrs = `data-fid="${f.id}" data-pid="${p.project_id}" data-ctr="${containerId}"`;
+        if (!cell) { html += `<td ${attrs} class="px-2 py-1.5 text-center text-slate-700">—</td>`; return; }
+        const cellPct = effPct(cell.passed, cell.total, cell.skipped);
+        const pct = cellPct ?? 0;
+        const cls = pct >= 90 ? 'bg-green-900/70 text-green-300' :
+                    pct >= 70 ? 'bg-yellow-900/70 text-yellow-300' :
+                    pct >= 50 ? 'bg-orange-900/70 text-orange-300' :
+                                'bg-red-900/70 text-red-300';
+        // Trend filtered to runs ≤ selected run; flat fallback when < 2 points
+        const trendArr = trendUpTo(cell.trend, p.selected_run);
+        const trendValues = trendArr.length >= 2
+          ? trendArr : (cellPct !== null ? [cellPct, cellPct] : null);
+        const trendSvg = trendValues ? sparkline(trendValues) : '';
+        const fname = f.name.replace(/'/g, "\\'");
+        const plabel = (p.platform_label || p.project_id).replace(/'/g, "\\'");
+        const vlabel = (p.variant_label || '').replace(/'/g, "\\'");
+        html += `<td ${attrs} class="px-2 py-1.5 text-center">
+          <span class="inline-block px-2 py-0.5 rounded ${cls} font-medium cursor-pointer hover:ring-2 hover:ring-white/40 transition-all"
+                title="${cell.passed}/${cell.total} passed · run #${cell.report_number}"
+                onclick="openCellDetail(${f.id},'${p.project_id}',${cell.report_number},'${fname}','${plabel}','${vlabel}')">${pct}%</span>
+          <div class="text-[10px] text-slate-400 mt-0.5 leading-none">${cell.passed}/${cell.total}</div>
+          ${trendSvg ? `<div class="mt-0.5 flex justify-center opacity-80">${trendSvg}</div>` : ''}
+        </td>`;
+      });
+      html += `</tr>`;
+    });
+  });
+  html += '</tbody></table>';
+  document.getElementById(containerId).innerHTML = html;
+}
+
+async function changeColumnRun(projectId, runNumber, containerId) {
+  const view = activeView();
+  if (!view) return;
+  const st = viewState(view.name);
+  const r = await fetch(
+    `/api/projects/${encodeURIComponent(projectId)}/feature-status?run=${runNumber}&scope=${encodeURIComponent(view.scope)}`
+  );
+  if (!r.ok) return;
+  const { results } = await r.json();
+
+  // If every feature returned null, this run has no feature data — revert the dropdown
+  if (Object.values(results).every(v => v === null)) {
+    const th = document.querySelector(`[data-hdr-pid="${projectId}"][data-hdr-ctr="${containerId}"]`);
+    const plat0 = st.data && st.data.platforms.find(p => p.project_id === projectId);
+    if (th && plat0) {
+      const sel = th.querySelector('select');
+      if (sel) sel.value = plat0.selected_run;
+      const warn = document.createElement('span');
+      warn.className = 'text-[9px] text-yellow-400 block text-center mt-0.5';
+      warn.textContent = 'No feature data for this run';
+      th.appendChild(warn);
+      setTimeout(() => warn.remove(), 3000);
+    }
+    return;
+  }
+
+  // Patch in-memory data so filter changes re-render the correct run
+  const data = st.data;
+  if (data) {
+    Object.entries(results).forEach(([fid, cell]) => {
+      if (!data.matrix[fid]) data.matrix[fid] = {};
+      if (cell) {
+        // Preserve existing trend (all-run history) — the per-project endpoint doesn't return it
+        const existing = data.matrix[fid][projectId];
+        data.matrix[fid][projectId] = { ...cell, trend: existing ? existing.trend : [] };
+      } else delete data.matrix[fid][projectId];
+    });
+    const plat = data.platforms.find(p => p.project_id === projectId);
+    if (plat) plat.selected_run = runNumber;
+  }
+
+  // Persist override so full reloads keep the chosen run
+  st.runOverrides[projectId] = runNumber;
+
+  // Update the Allure link in the column header
+  const th = document.querySelector(`[data-hdr-pid="${projectId}"][data-hdr-ctr="${containerId}"]`);
+  if (th && config.allure_base_url) {
+    const a = th.querySelector('a[href]');
+    const newUrl = `${config.allure_base_url}/projects/${projectId}/reports/${runNumber}/index.html`;
+    if (a) {
+      a.href = newUrl;
+    } else {
+      // Link wasn't rendered initially (no allure_base_url at render time) — inject it now
+      th.insertAdjacentHTML('beforeend',
+        `<a href="${newUrl}" target="_blank" onclick="event.stopPropagation()"
+           class="mt-1 block text-center text-[10px] text-blue-400 hover:text-blue-300 hover:underline leading-tight">
+           ↗ Open Allure
+         </a>`);
+    }
+  }
+
+  // Update only this column's cells — leave all other columns untouched
+  const colorCls = pct => pct >= 90 ? 'bg-green-900/70 text-green-300' :
+                           pct >= 70 ? 'bg-yellow-900/70 text-yellow-300' :
+                           pct >= 50 ? 'bg-orange-900/70 text-orange-300' :
+                                       'bg-red-900/70 text-red-300';
+  document.querySelectorAll(`[data-ctr="${containerId}"]`).forEach(td => {
+    if (td.dataset.pid !== projectId) return;
+    const cell = results[td.dataset.fid];
+    if (!cell) {
+      td.className = 'px-2 py-1.5 text-center text-slate-700';
+      td.innerHTML = '—';
+    } else {
+      const cellPct = effPct(cell.passed, cell.total, cell.skipped);
+      const pct = cellPct ?? 0;
+      td.className = 'px-2 py-1.5 text-center';
+      const rawTrend = data && data.matrix[td.dataset.fid] && data.matrix[td.dataset.fid][projectId]
+        ? data.matrix[td.dataset.fid][projectId].trend : [];
+      const trendArr = trendUpTo(rawTrend, runNumber);
+      const trendValues = trendArr.length >= 2
+        ? trendArr : (cellPct !== null ? [cellPct, cellPct] : null);
+      const trendSvg = trendValues ? sparkline(trendValues) : '';
+      const fid   = td.dataset.fid;
+      const fname = (data && data.features.find(f => String(f.id) === fid)?.name || '').replace(/'/g, "\\'");
+      const plat  = data && data.platforms.find(p => p.project_id === projectId);
+      const plabel = (plat?.platform_label || projectId).replace(/'/g, "\\'");
+      const vlabel = (plat?.variant_label  || '').replace(/'/g, "\\'");
+      td.innerHTML = `<span class="inline-block px-2 py-0.5 rounded ${colorCls(pct)} font-medium cursor-pointer hover:ring-2 hover:ring-white/40 transition-all"
+            title="${cell.passed}/${cell.total} passed · run #${cell.report_number}"
+            onclick="openCellDetail(${fid},'${projectId}',${runNumber},'${fname}','${plabel}','${vlabel}')">${pct}%</span>
+            <div class="text-[10px] text-slate-400 mt-0.5 leading-none">${cell.passed}/${cell.total}</div>
+            ${trendSvg ? `<div class="mt-0.5 flex justify-center opacity-80">${trendSvg}</div>` : ''}`;
+    }
+  });
+}
+
+// ── Feature management panel ─────────────────────────────────
+let _panelScope = '';
+
+// Distinct scopes across configured views, in view order.
+function viewScopes() {
+  const seen = [];
+  configViews().forEach(v => { if (v.scope && !seen.includes(v.scope)) seen.push(v.scope); });
+  return seen;
+}
+
+async function switchFmgmtScope(scope) {
+  const scopes = viewScopes();
+  _panelScope = (scope && scopes.includes(scope)) ? scope : (scopes.includes(_panelScope) ? _panelScope : (scopes[0] || ''));
+  // Rebuild scope toggle buttons (one per view scope)
+  const holder = document.getElementById('fmgmt-scopes');
+  holder.innerHTML = '';
+  scopes.forEach(s => {
+    const b = document.createElement('button');
+    b.className = `px-3 py-1.5 text-xs transition-colors ${s === _panelScope ? 'bg-blue-700 text-white' : 'bg-slate-800 text-slate-400 hover:text-slate-200'}`;
+    b.textContent = s;
+    b.onclick = () => switchFmgmtScope(s);
+    holder.appendChild(b);
+  });
+  const r = await fetch(`/api/features?scope=${encodeURIComponent(_panelScope)}`);
+  allFeatures = await r.json();
+  renderFeatureList();
+}
+
+async function seedFromSuites() {
+  const btn = document.getElementById('seed-btn');
+  btn.disabled = true;
+  btn.textContent = 'Seeding…';
+  try {
+    const r = await fetch(`/api/features/seed-from-suites?scope=${encodeURIComponent(_panelScope)}`, { method: 'POST' });
+    const data = await r.json();
+    invalidateMatrix();
+    await switchFmgmtScope(_panelScope);
+    if (data.features_added === 0 && data.mappings_added === 0) {
+      btn.textContent = '🌱 Already up to date';
+    } else {
+      btn.textContent = `🌱 +${data.features_added} features, +${data.mappings_added} mappings`;
+    }
+    setTimeout(() => { btn.textContent = '🌱 Seed from suites'; btn.disabled = false; }, 3000);
+  } catch {
+    btn.textContent = '🌱 Seed from suites';
+    btn.disabled = false;
+  }
+}
+
+// ── Test-name autocomplete ────────────────────────────────────
+let _acFid = null, _acIdx = -1, _acNames = [], _acTimer2 = null;
+
+function testAcInput(e, fid) {
+  _acFid = fid;
+  _acIdx = -1;
+  clearTimeout(_acTimer2);
+  const q = e.target.value.trim();
+  if (q.length < 2) { closeTestAc(); return; }
+  _acTimer2 = setTimeout(() => _acFetch(q, e.target), 200);
+}
+
+async function _acFetch(q, inputEl) {
+  const r = await fetch(`/api/test-names?q=${encodeURIComponent(q)}`);
+  if (!r.ok) return;
+  _acNames = await r.json();
+  _acIdx = -1;
+  _acRender(inputEl);
+}
+
+function _acRender(inputEl) {
+  const dd = document.getElementById('test-ac-dropdown');
+  if (!_acNames.length) { dd.classList.add('hidden'); return; }
+  const rect = inputEl.getBoundingClientRect();
+  dd.style.left  = rect.left + 'px';
+  dd.style.top   = (rect.bottom + window.scrollY + 2) + 'px';
+  dd.style.width = rect.width + 'px';
+  dd.innerHTML = _acNames.map((n, i) =>
+    `<div class="px-3 py-1.5 cursor-pointer text-slate-300 hover:bg-slate-700 truncate"
+          data-i="${i}"
+          onmousedown="event.preventDefault()"
+          onclick="_acSelect(_acNames[${i}])">${escHtml(n)}</div>`
+  ).join('');
+  dd.classList.remove('hidden');
+}
+
+function _acHighlight() {
+  document.querySelectorAll('#test-ac-dropdown [data-i]').forEach((el, i) => {
+    el.classList.toggle('bg-blue-700', i === _acIdx);
+    el.classList.toggle('text-white',  i === _acIdx);
+  });
+}
+
+function _acSelect(name) {
+  if (_acFid === null) return;
+  const inp = document.getElementById(`mi-${_acFid}`);
+  if (inp) inp.value = name;
+  closeTestAc();
+}
+
+function closeTestAc() {
+  _acNames = []; _acIdx = -1;
+  document.getElementById('test-ac-dropdown').classList.add('hidden');
+}
+
+function testAcKeydown(e, fid) {
+  const dd = document.getElementById('test-ac-dropdown');
+  const open = !dd.classList.contains('hidden');
+  if (e.key === 'ArrowDown') {
+    if (!open) return;
+    e.preventDefault();
+    _acIdx = Math.min(_acIdx + 1, _acNames.length - 1);
+    _acHighlight();
+  } else if (e.key === 'ArrowUp') {
+    if (!open) return;
+    e.preventDefault();
+    _acIdx = Math.max(_acIdx - 1, -1);
+    _acHighlight();
+  } else if (e.key === 'Enter') {
+    if (open && _acIdx >= 0) {
+      e.preventDefault();
+      _acSelect(_acNames[_acIdx]);
+    } else {
+      addMapping(fid);
+    }
+  } else if (e.key === 'Escape') {
+    closeTestAc();
+  }
+}
+
+function renderFeatureList() {
+  const groups = {};
+  allFeatures.forEach(f => { const g = f.feature_group || 'Other'; (groups[g] = groups[g] || []).push(f); });
+
+  document.getElementById('feature-list').innerHTML =
+    Object.entries(groups).map(([group, features]) => `
+      <div class="mb-5">
+        <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">${group}</h3>
+        ${features.map(renderFeatureItem).join('')}
+      </div>`).join('') ||
+    '<p class="text-slate-500 text-sm">No features defined.</p>';
+}
+
+function renderFeatureItem(f) {
+  const chips = f.mappings.map(m => `
+    <span class="inline-flex items-center gap-1 bg-slate-700 rounded px-2 py-0.5 text-xs text-slate-300">
+      ${m.test_name}
+      <button onclick="removeMapping(${f.id}, ${m.id})"
+        class="text-slate-500 hover:text-red-400 leading-none ml-0.5">×</button>
+    </span>`).join('');
+
+  return `
+    <div class="bg-slate-800 border border-slate-700 rounded-lg p-3 mb-2">
+      <div class="flex items-center justify-between mb-1">
+        <span class="text-sm font-medium text-slate-200">${f.name}</span>
+        <div class="flex items-center gap-2">
+          ${f.mappings.length > 0 ? `<button onclick="clearFeatureMappings(${f.id})"
+            class="text-xs text-slate-500 hover:text-orange-400 transition-colors">Clear</button>` : ''}
+          <button onclick="deleteFeature(${f.id})"
+            class="text-xs text-slate-500 hover:text-red-400 transition-colors">Delete</button>
+        </div>
+      </div>
+      <div class="flex items-center gap-1.5 mb-2">
+        <span class="text-[10px] text-slate-500 shrink-0">Group</span>
+        <input id="fg-${f.id}" type="text" value="${(f.feature_group || '').replace(/"/g, '&quot;')}"
+          placeholder="e.g. Layer 3"
+          class="flex-1 min-w-0 bg-slate-700 border border-slate-700 rounded px-2 py-0.5 text-xs text-slate-300
+                 focus:outline-none focus:border-blue-500 placeholder-slate-600"
+          onkeydown="if(event.key==='Enter'){this.blur()}"
+          onblur="updateFeatureGroup(${f.id}, this.value)" />
+      </div>
+      ${f.mappings.length === 0
+          ? '<p class="text-xs text-slate-600 mb-2">No test cases mapped yet</p>'
+          : `<div class="flex flex-wrap gap-1 mb-2">${chips}</div>`}
+      <div class="flex gap-1">
+        <input id="mi-${f.id}" type="text" autocomplete="off" placeholder="test_case_name…"
+          class="flex-1 min-w-0 bg-slate-700 border border-slate-600 rounded px-2 py-1 text-xs text-slate-200
+                 focus:outline-none focus:border-blue-500 placeholder-slate-500"
+          oninput="testAcInput(event,${f.id})"
+          onkeydown="testAcKeydown(event,${f.id})"
+          onblur="if (!document.getElementById('test-ac-dropdown').matches(':hover')) closeTestAc()" />
+        <button onclick="addMapping(${f.id})"
+          class="bg-blue-700 hover:bg-blue-600 text-white text-xs px-2.5 py-1 rounded shrink-0">+</button>
+      </div>
+    </div>`;
+}
+
+async function updateFeatureGroup(featureId, newGroup) {
+  const input = document.getElementById(`fg-${featureId}`);
+  const group = newGroup.trim();
+  // Find the current stored group to skip no-op saves
+  const current = allFeatures.find(f => f.id === featureId)?.feature_group ?? '';
+  if (group === current) return;
+  const r = await fetch(`/api/features/${featureId}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ feature_group: group }),
+  });
+  if (r.ok) {
+    // Update local cache so subsequent blur checks don't re-save
+    const f = allFeatures.find(f => f.id === featureId);
+    if (f) f.feature_group = group;
+    invalidateMatrix();
+    // Brief visual feedback on the input
+    if (input) { input.style.borderColor = '#22c55e'; setTimeout(() => { input.style.borderColor = ''; }, 800); }
+    renderFeatureList(); // re-group headers may change
+  } else {
+    if (input) { input.style.borderColor = '#ef4444'; setTimeout(() => { input.style.borderColor = ''; }, 1500); }
+  }
+}
+
+async function addNewFeature() {
+  const nameEl  = document.getElementById('new-feature-name');
+  const groupEl = document.getElementById('new-feature-group');
+  const errEl   = document.getElementById('new-feature-err');
+  const name    = nameEl.value.trim();
+  const group   = groupEl.value.trim();
+  errEl.classList.add('hidden');
+  if (!name) { errEl.textContent = 'Name is required'; errEl.classList.remove('hidden'); return; }
+
+  const r = await fetch('/api/features', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, feature_group: group, feature_scope: _panelScope }),
+  });
+  if (r.ok) {
+    nameEl.value = ''; groupEl.value = '';
+    await switchFmgmtScope(_panelScope);
+    invalidateMatrix();
+  } else {
+    const d = await r.json().catch(() => ({}));
+    errEl.textContent = d.detail || 'Failed to add feature';
+    errEl.classList.remove('hidden');
+  }
+}
+
+async function deleteFeature(id) {
+  if (!confirm('Delete this feature and all its mappings?')) return;
+  await fetch(`/api/features/${id}`, { method: 'DELETE' });
+  await switchFmgmtScope(_panelScope);
+  invalidateMatrix();
+}
+
+async function addMapping(featureId) {
+  const input = document.getElementById(`mi-${featureId}`);
+  const name  = input.value.trim();
+  if (!name) return;
+  const r = await fetch(`/api/features/${featureId}/mappings`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ test_name: name }),
+  });
+  if (r.ok) {
+    input.value = '';
+    await switchFmgmtScope(_panelScope);
+    invalidateMatrix();
+  } else if (r.status === 409) {
+    input.style.borderColor = '#f97316';
+    input.title = 'Already mapped';
+    setTimeout(() => { input.style.borderColor = ''; input.title = ''; }, 1500);
+  }
+}
+
+async function exportFeatures() {
+  const r = await fetch(`/api/features/export?scope=${_panelScope}`);
+  if (!r.ok) { alert('Export failed'); return; }
+  const data = await r.json();
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `features-${_panelScope}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+async function importFeatures(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  event.target.value = '';   // reset so same file can be re-selected
+  const status = document.getElementById('fmgmt-import-status');
+  status.textContent = 'Importing…';
+  status.classList.remove('hidden', 'text-red-400', 'text-green-400');
+  status.classList.add('text-slate-400');
+  let payload;
+  try {
+    payload = JSON.parse(await file.text());
+  } catch {
+    status.textContent = 'Invalid JSON file';
+    status.classList.add('text-red-400');
+    return;
+  }
+  // Allow importing into the current scope regardless of the file's scope field
+  payload.scope = _panelScope;
+  const r = await fetch('/api/features/import', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  if (!r.ok) {
+    status.textContent = 'Import failed';
+    status.classList.add('text-red-400');
+    return;
+  }
+  const { features_added, mappings_added } = await r.json();
+  status.textContent = `+${features_added} features, +${mappings_added} mappings`;
+  status.classList.add('text-green-400');
+  setTimeout(() => status.classList.add('hidden'), 4000);
+  await switchFmgmtScope(_panelScope);
+  invalidateMatrix();  // force matrix refresh
+}
+
+async function guessAllMappings() {
+  const btn = document.getElementById('guess-btn');
+  btn.disabled = true;
+  btn.textContent = 'Mapping…';
+  try {
+    const r = await fetch('/api/features/guess-mappings', { method: 'POST' });
+    const data = await r.json();
+    await switchFmgmtScope(_panelScope);   // reload panel
+    invalidateMatrix();                    // force matrix refresh
+    if (data.total_added === 0) {
+      btn.textContent = '✨ Already up to date';
+    } else {
+      btn.textContent = `✨ Added ${data.total_added} mappings`;
+    }
+    setTimeout(() => { btn.textContent = '✨ Auto-map'; btn.disabled = false; }, 2500);
+  } catch {
+    btn.textContent = '✨ Auto-map';
+    btn.disabled = false;
+  }
+}
+
+async function removeMapping(featureId, mappingId) {
+  await fetch(`/api/features/${featureId}/mappings/${mappingId}`, { method: 'DELETE' });
+  await switchFmgmtScope(_panelScope);
+  invalidateMatrix();
+}
+
+async function clearFeatureMappings(featureId) {
+  const f = allFeatures.find(f => f.id === featureId);
+  if (!f || !f.mappings.length) return;
+  await Promise.all(f.mappings.map(m =>
+    fetch(`/api/features/${featureId}/mappings/${m.id}`, { method: 'DELETE' })
+  ));
+  invalidateMatrix();
+  await switchFmgmtScope(_panelScope);
+}
+
+// ── Settings modal ───────────────────────────────────────────
+let _settingsSaveTimer = null;
+
+async function openCellDetail(fid, pid, run, featureName, platformLabel, variantLabel) {
+  const modal = document.getElementById('cell-detail-modal');
+  document.getElementById('cell-detail-title').textContent = featureName;
+  document.getElementById('cell-detail-sub').textContent =
+    `${platformLabel}${variantLabel ? ' · ' + variantLabel : ''} · Run #${run}`;
+  document.getElementById('cell-detail-body').innerHTML =
+    '<p class="text-slate-400">Loading…</p>';
+  modal.classList.remove('hidden');
+
+  const r = await fetch(`/api/features/${fid}/tests?project_id=${encodeURIComponent(pid)}&run=${run}`);
+  if (!r.ok) {
+    document.getElementById('cell-detail-body').innerHTML =
+      '<p class="text-red-400">Failed to load test results.</p>';
+    return;
+  }
+  const tests = await r.json();
+  if (!tests.length) {
+    document.getElementById('cell-detail-body').innerHTML =
+      '<p class="text-slate-400">No test results found for this cell.</p>';
+    return;
+  }
+  const statusCls = s => s === 'passed'  ? 'text-green-400'  :
+                         s === 'failed'  ? 'text-red-400'    :
+                         s === 'broken'  ? 'text-orange-400' :
+                         s === 'skipped' ? 'text-slate-400'  : 'text-slate-500';
+  const statusOrder = {failed: 0, broken: 1, skipped: 2, passed: 3};
+  const passed = tests.filter(t => t.status === 'passed').length;
+  const total  = tests.length;
+  let html = `<p class="text-xs text-slate-400 mb-3">${passed}/${total} passed</p>`;
+
+  // Group parametrized variants: "test_foo[bar]" and "test_foo[baz]" → base "test_foo"
+  const groups = new Map(); // base_name → [{param, status, uid}]
+  for (const t of tests) {
+    const m = t.test_name.match(/^(.+?)\[(.+)\]$/);
+    const base  = m ? m[1] : t.test_name;
+    const param = m ? m[2] : null;
+    if (!groups.has(base)) groups.set(base, []);
+    groups.get(base).push({ param, status: t.status, uid: t.uid });
+  }
+  // Sort groups: worst status first, then name
+  const groupWorst = variants => Math.min(...variants.map(v => statusOrder[v.status] ?? 4));
+  const sortedBases = [...groups.entries()].sort((a, b) =>
+    groupWorst(a[1]) - groupWorst(b[1]) || a[0].localeCompare(b[0]));
+
+  html += '<table class="w-full"><tbody>';
+  for (const [base, variants] of sortedBases) {
+    variants.sort((a, b) => (statusOrder[a.status] ?? 4) - (statusOrder[b.status] ?? 4));
+    const v0 = variants[0];
+    const showAsGroup = variants.length > 1;  // only group when multiple variants
+    const chipCls = s => s === 'passed'  ? 'bg-green-900/60 text-green-300 hover:bg-green-900'    :
+                         s === 'failed'  ? 'bg-red-900/60 text-red-300 hover:bg-red-900'          :
+                         s === 'broken'  ? 'bg-orange-900/60 text-orange-300 hover:bg-orange-900' :
+                                          'bg-slate-700/60 text-slate-400 hover:bg-slate-700';
+    const allureLink = (v, label) => {
+      const url = v.uid && config.allure_base_url
+        ? `${config.allure_base_url}/projects/${encodeURIComponent(pid)}/reports/${run}/index.html#testresult/${v.uid}`
+        : null;
+      return url
+        ? `<a href="${url}" target="_blank" class="hover:underline hover:text-blue-400">${label}</a>`
+        : label;
+    };
+    if (!showAsGroup) {
+      // Single test (parametrized or not): show full name, status on right
+      const displayName = v0.param !== null ? `${base}[${v0.param}]` : base;
+      html += `<tr class="border-t border-slate-800">
+        <td class="py-1.5 pr-3 text-slate-200 break-all">${allureLink(v0, displayName + (v0.uid && config.allure_base_url ? ' ↗' : ''))}</td>
+        <td class="py-1.5 text-right ${statusCls(v0.status)} font-medium whitespace-nowrap">${v0.status}</td>
+      </tr>`;
+    } else {
+      // Multiple variants: base name + pass/fail summary left, chips right
+      const grpPassed = variants.filter(v => v.status === 'passed').length;
+      const grpFailed = variants.filter(v => v.status === 'failed' || v.status === 'broken').length;
+      const grpCls    = grpFailed > 0 ? 'text-red-400' : grpPassed === variants.length ? 'text-green-400' : 'text-yellow-400';
+      const summary   = `<span class="${grpCls} text-xs font-medium ml-2 whitespace-nowrap">${grpPassed}/${variants.length}</span>`;
+      const chips = variants.map(v =>
+        v.uid && config.allure_base_url
+          ? `<a href="${config.allure_base_url}/projects/${encodeURIComponent(pid)}/reports/${run}/index.html#testresult/${v.uid}"
+               target="_blank" title="${v.status}"
+               class="inline-block px-1.5 py-0.5 rounded font-mono text-[10px] transition-colors ${chipCls(v.status)}">[${v.param}]</a>`
+          : `<span title="${v.status}" class="inline-block px-1.5 py-0.5 rounded font-mono text-[10px] ${chipCls(v.status)}">[${v.param}]</span>`
+      ).join(' ');
+      html += `<tr class="border-t border-slate-800">
+        <td class="py-1.5 pr-3 text-slate-200 align-top whitespace-nowrap">${base}${summary}</td>
+        <td class="py-1.5 text-right leading-relaxed">${chips}</td>
+      </tr>`;
+    }
+  }
+  html += '</tbody></table>';
+  document.getElementById('cell-detail-body').innerHTML = html;
+}
+
+function closeCellDetail() {
+  document.getElementById('cell-detail-modal').classList.add('hidden');
+}
+
+function openSettings() {
+  buildSettingsModal();
+  document.getElementById('toggle-date-filter').checked = !!userSettings.show_date_filter;
+  document.getElementById('toggle-exclude-skipped').checked = !!userSettings.exclude_skipped;
+  document.getElementById('settings-modal').classList.remove('hidden');
+}
+
+function closeSettings() {
+  document.getElementById('settings-modal').classList.add('hidden');
+}
+
+function buildSettingsModal() {
+  const root = document.getElementById('settings-dim-sections');
+  root.innerHTML = '';
+  if (!userSettings.hidden) userSettings.hidden = {};
+
+  cfgDims().forEach(dim => {
+    const key = dim.key;
+    const hiddenArr = userSettings.hidden[key] || (userSettings.hidden[key] = []);
+
+    const section = document.createElement('div');
+    const h = document.createElement('h3');
+    h.className = 'text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3';
+    h.textContent = dim.label || key;
+    const container = document.createElement('div');
+    container.className = 'flex flex-wrap gap-2';
+    section.appendChild(h); section.appendChild(container);
+    root.appendChild(section);
+
+    // collect unique values + labels from all projects
+    const seen = new Map();
+    allProjects.forEach(p => { const v = projDim(p, key); if (v !== '' && !seen.has(v)) seen.set(v, projDimLabel(p, key)); });
+
+    seen.forEach((label, value) => {
+      const wrap = document.createElement('label');
+      wrap.className = 'flex items-center gap-2 cursor-pointer select-none ' +
+        'bg-slate-800 border border-slate-700 rounded-lg px-3 py-2 ' +
+        'hover:border-slate-500 transition-colors text-sm';
+
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = !hiddenArr.includes(value);
+      cb.className = 'accent-blue-500 w-4 h-4 shrink-0';
+      cb.addEventListener('change', () => {
+        const arr = userSettings.hidden[key];
+        if (cb.checked) userSettings.hidden[key] = arr.filter(v => v !== value);
+        else if (!arr.includes(value)) arr.push(value);
+        buildFilters();
+        renderGrid();
+        scheduleSettingsSave();
+      });
+
+      const span = document.createElement('span');
+      span.className = 'text-slate-200';
+      span.textContent = label;
+
+      wrap.appendChild(cb);
+      wrap.appendChild(span);
+      container.appendChild(wrap);
+    });
+  });
+}
+
+function toggleDateFilter(enabled) {
+  userSettings.show_date_filter = enabled;
+  const row = document.getElementById('date-filter-row');
+  if (enabled) {
+    row.classList.remove('hidden');
+  } else {
+    row.classList.add('hidden');
+    document.getElementById('date-from').value = '';
+    document.getElementById('date-to').value = '';
+    renderGrid();
+  }
+  scheduleSettingsSave();
+}
+
+function toggleExcludeSkipped(enabled) {
+  userSettings.exclude_skipped = enabled;
+  // Re-render every surface that shows a pass rate so numbers update at once.
+  // The detail panel (badge + runs table) re-renders from fresh state when it
+  // is next opened, so no live refresh is needed for it here.
+  renderGrid();
+  renderMatrix();
+  scheduleSettingsSave();
+}
+
+function applyDateFilterVisibility() {
+  const row = document.getElementById('date-filter-row');
+  if (userSettings.show_date_filter) {
+    row.classList.remove('hidden');
+  } else {
+    row.classList.add('hidden');
+  }
+}
+
+function scheduleSettingsSave() {
+  clearTimeout(_settingsSaveTimer);
+  document.getElementById('settings-status').textContent = 'Saving…';
+  _settingsSaveTimer = setTimeout(async () => {
+    try {
+      await fetch('/api/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userSettings),
+      });
+      document.getElementById('settings-status').textContent = 'Saved';
+      setTimeout(() => { document.getElementById('settings-status').textContent = ''; }, 1500);
+    } catch {
+      document.getElementById('settings-status').textContent = 'Save failed';
+    }
+  }, 400);
+}
+
+// Migrate legacy {hidden_cadences,hidden_platforms,hidden_variants} settings to
+// the generic { hidden: { dimKey: [...] } } shape.
+function _migrateSettings() {
+  if (!userSettings || typeof userSettings !== 'object') userSettings = {};
+  if (!userSettings.hidden || typeof userSettings.hidden !== 'object') userSettings.hidden = {};
+  const legacy = { cadence: 'hidden_cadences', platform: 'hidden_platforms', variant: 'hidden_variants' };
+  for (const [dimKey, oldKey] of Object.entries(legacy)) {
+    if (Array.isArray(userSettings[oldKey]) && userSettings[oldKey].length && !userSettings.hidden[dimKey])
+      userSettings.hidden[dimKey] = userSettings[oldKey];
+    delete userSettings[oldKey];
+  }
+}
+
+// ── Init ────────────────────────────────────────────────────
+async function loadDashboard() {
+  [config, allProjects, userSettings] = await Promise.all([
+    fetch('/api/config').then(r => r.json()),
+    fetch('/api/projects').then(r => r.json()),
+    fetch('/api/settings').then(r => r.json()),
+  ]);
+  _migrateSettings();
+  applyDateFilterVisibility();
+  buildViewTabs();
+  buildFilters();
+  renderGrid();
+  document.getElementById('last-refresh').textContent =
+    'Updated ' + new Date().toLocaleTimeString();
+  document.getElementById('project-count').textContent =
+    `${allProjects.length} projects`;
+}
+
+async function init() {
+  const authed = await checkAuth();
+  if (authed) await loadDashboard();
+}
+
+async function refreshData() {
+  allProjects = await fetch('/api/projects').then(r => r.json());
+  renderGrid();
+  document.getElementById('last-refresh').textContent =
+    'Updated ' + new Date().toLocaleTimeString();
+}
+
+// ── Filter helpers ──────────────────────────────────────────
+function unique(arr) { return [...new Set(arr)].sort(); }
+
+function buildPills(containerId, values, labelFn, stateGetter, stateSetter) {
+  const container = document.getElementById(containerId);
+  container.innerHTML = '';
+
+  const addPill = (value, label) => {
+    const btn = document.createElement('button');
+    btn.className =
+      'pill text-xs px-3 py-1 rounded-full border border-slate-700 bg-slate-800 ' +
+      'hover:bg-slate-700 text-slate-300 transition-colors';
+    btn.textContent = label;
+    btn.dataset.value = value;
+    if (stateGetter() === value) btn.classList.add('active');
+    btn.onclick = () => {
+      stateSetter(value);
+      // refresh all pill containers so they reflect new state
+      buildFilters();
+      renderGrid();
+    };
+    container.appendChild(btn);
+  };
+
+  addPill('all', 'All');
+  values.forEach(v => addPill(v, labelFn(v)));
+}
+
+function buildFilters() {
+  const vis = visibleProjects();
+  const rows = document.getElementById('dim-filter-rows');
+  rows.innerHTML = '';
+
+  cfgDims().forEach(dim => {
+    const key = dim.key;
+    const values = unique(vis.map(p => projDim(p, key)).filter(v => v !== ''));
+    // Reset active filter if its value is now hidden
+    if (_dimFilter[key] && _dimFilter[key] !== 'all' && !values.includes(_dimFilter[key]))
+      _dimFilter[key] = 'all';
+
+    const row = document.createElement('div');
+    row.className = 'flex flex-wrap items-center gap-2';
+    const label = document.createElement('span');
+    label.className = 'text-xs text-slate-500 w-16 shrink-0';
+    label.textContent = dim.label || key;
+    const pills = document.createElement('div');
+    pills.className = 'flex flex-wrap gap-1.5';
+    pills.id = `dimpills-${key}`;
+    row.appendChild(label); row.appendChild(pills);
+    rows.appendChild(row);
+
+    const labelFor = v => { const p = allProjects.find(pp => projDim(pp, key) === v); return p ? projDimLabel(p, key) : v; };
+    buildPills(`dimpills-${key}`, values, labelFor,
+      () => _dimFilter[key] || 'all', v => { _dimFilter[key] = v; });
+  });
+}
+
+function visibleProjects() {
+  return allProjects.filter(p =>
+    cfgDims().every(dim => !dimHidden(dim.key).includes(projDim(p, dim.key)))
+  );
+}
+
+function filteredProjects() {
+  const { from, to } = dateRange();
+  return visibleProjects().filter(p => {
+    const ms = p.latest_run?.start_ms;
+    if ((from || to) && !ms) return false;
+    if (from && ms < from) return false;
+    if (to   && ms > to)   return false;
+    return cfgDims().every(dim => {
+      const sel = _dimFilter[dim.key] || 'all';
+      return sel === 'all' || projDim(p, dim.key) === sel;
+    });
+  }).sort((a, b) => (b.latest_run?.stop_ms ?? 0) - (a.latest_run?.stop_ms ?? 0));
+}
+
+function dateRange() {
+  const fromVal = document.getElementById('date-from')?.value;
+  const toVal   = document.getElementById('date-to')?.value;
+  const from = fromVal ? new Date(fromVal).getTime() : null;
+  // end of the "to" day
+  const to   = toVal   ? new Date(toVal).getTime() + 86399999 : null;
+  return { from, to };
+}
+
+// ── Pass-rate colour ────────────────────────────────────────
+function pctColor(pct) {
+  if (pct === null || pct === undefined) return '#475569';
+  if (pct >= 90) return '#22c55e';
+  if (pct >= 70) return '#eab308';
+  if (pct >= 50) return '#f97316';
+  return '#ef4444';
+}
+
+function pctTextClass(pct) {
+  if (pct === null || pct === undefined) return 'text-slate-500';
+  if (pct >= 90) return 'text-green-400';
+  if (pct >= 70) return 'text-yellow-400';
+  if (pct >= 50) return 'text-orange-400';
+  return 'text-red-400';
+}
+
+// Effective pass rate from raw counts, honouring the per-user "exclude skipped"
+// setting (drops skipped from the denominator). Returns a 1-decimal pct or null.
+function effPct(passed, total, skipped) {
+  if (total === null || total === undefined || total <= 0) return null;
+  const denom = (userSettings && userSettings.exclude_skipped)
+    ? total - (skipped || 0)
+    : total;
+  if (denom <= 0) return null;
+  return Math.round((passed || 0) * 100 / denom * 10) / 10;
+}
+
+// Rebuild a project's trend pct array honouring the exclude-skipped setting.
+// Falls back to the server-precomputed `trend` when the setting is off.
+function trendPcts(p) {
+  if (!userSettings || !userSettings.exclude_skipped) return p.trend || [];
+  const total   = p.trend_total   || [];
+  const passed  = p.trend_passed  || [];
+  const skipped = p.trend_skipped || [];
+  if (!total.length) return p.trend || [];
+  return total.map((t, i) => effPct(passed[i], t, skipped[i]));
+}
+
+// ── Format helpers ──────────────────────────────────────────
+function fmtDuration(ms) {
+  if (!ms) return '—';
+  const h = ms / 3600000;
+  if (h < 24) return `${h.toFixed(1)}h`;
+  const d = Math.floor(h / 24), rh = Math.round(h % 24);
+  return `${d}d ${rh}h`;
+}
+
+function fmtDate(ms) {
+  if (!ms) return '—';
+  return new Date(ms).toLocaleString(undefined, {
+    month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false
+  });
+}
+
+// Filter trend [{run, pct}] to entries ≤ selectedRun, return plain pct array
+function trendUpTo(trend, selectedRun) {
+  if (!trend || !trend.length) return [];
+  return trend.filter(t => t.run <= selectedRun).map(t => t.pct);
+}
+
+// Pass-rate delta chip vs previous run (last entry in trend = current run)
+function pctDeltaChip(currentPct, trend) {
+  if (currentPct === null || currentPct === undefined) return '';
+  if (!trend || trend.length < 2) return '';
+  const prev = trend[trend.length - 2];
+  if (prev === null || prev === undefined) return '';
+  const d = +(currentPct - prev).toFixed(1);
+  if (d === 0) return '';
+  const up    = d > 0;
+  const cls   = up ? 'text-green-400 bg-green-900/40' : 'text-red-400 bg-red-900/40';
+  const arrow = up ? '▲' : '▼';
+  const sign  = up ? '+' : '';
+  return `<span class="text-xs font-semibold px-2 py-0.5 rounded ${cls} self-center" title="vs previous run (${prev}%)">${arrow} ${sign}${d}%</span>`;
+}
+
+// ── Sparkline ────────────────────────────────────────────────
+function sparkline(values, strokeOverride) {
+  if (!values || values.length < 2) return '';
+  const valid = values.filter(v => v !== null && v !== undefined);
+  if (valid.length < 2) return '';
+  const W = 72, H = 24, pad = 2;
+  const min = Math.min(...valid);
+  const max = Math.max(...valid);
+  const range = max - min || 1;
+  const step = (W - pad * 2) / (values.length - 1);
+  const pts = [];
+  values.forEach((v, i) => {
+    if (v === null || v === undefined) return;
+    const x = (pad + i * step).toFixed(1);
+    const y = (H - pad - (v - min) / range * (H - pad * 2)).toFixed(1);
+    pts.push(`${x},${y}`);
+  });
+  if (pts.length < 2) return '';
+  const stroke = strokeOverride || pctColor(valid[valid.length - 1]);
+  return `<svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" style="display:block">` +
+    `<polyline points="${pts.join(' ')}" fill="none" stroke="${stroke}" stroke-width="1.5" ` +
+    `stroke-linejoin="round" stroke-linecap="round"/></svg>`;
+}
+
+// ── Cards ───────────────────────────────────────────────────
+function renderGrid() {
+  const projects = filteredProjects();
+  const grid  = document.getElementById('grid');
+  const empty = document.getElementById('empty-msg');
+  grid.innerHTML = '';
+
+  if (projects.length === 0) {
+    empty.classList.remove('hidden');
+    return;
+  }
+  empty.classList.add('hidden');
+
+  projects.forEach(p => {
+    const r   = p.latest_run;
+    const pct = effPct(r.passed, r.total, r.skipped);
+    const trend = trendPcts(p);
+    const color = pctColor(pct);
+    const textCls = pctTextClass(pct);
+
+    // multi-segment pass bar
+    const total = r.total || 1;
+    const pw = (r.passed  / total * 100).toFixed(1);
+    const fw = (r.failed  / total * 100).toFixed(1);
+    const bw = (r.broken  / total * 100).toFixed(1);
+    const sw = (r.skipped / total * 100).toFixed(1);
+
+    const card = document.createElement('div');
+    card.className =
+      'bg-slate-800 hover:bg-slate-750 border border-slate-700 rounded-xl p-4 ' +
+      'cursor-pointer transition-all hover:border-blue-500/50 hover:shadow-lg hover:shadow-blue-500/10';
+    card.onclick = () => openDetail(p);
+
+    const titleLabel = cardTitle(p);
+    const badges = badgeDims().map((d, i) =>
+      `<span class="text-[10px] px-1.5 py-0.5 rounded ${i === 0
+        ? 'bg-blue-900/60 text-blue-300 border border-blue-800'
+        : 'bg-slate-700 text-slate-300'}">${projDimLabel(p, d.key)}</span>`).join('');
+
+    card.innerHTML = `
+      <!-- title dimension -->
+      <div class="font-semibold text-slate-100 text-sm leading-tight truncate mb-1"
+           title="${titleLabel}">${titleLabel}</div>
+
+      <!-- badges (non-title dimensions) -->
+      <div class="flex gap-1.5 flex-wrap mb-3">
+        ${badges}
+      </div>
+
+      <!-- pass rate + trend sparkline -->
+      <div class="flex items-start justify-between mb-1">
+        <div class="text-3xl font-bold ${textCls} leading-none flex items-baseline gap-1.5">
+          <span>${pct !== null ? pct + '%' : '—'}</span>
+          ${pctDeltaChip(pct, trend)}
+        </div>
+        <div class="opacity-75 mt-0.5">${sparkline(trend)}</div>
+      </div>
+      <div class="text-sm text-slate-400 mb-2">
+        run #${r.report_number}
+        ${r.start_ms ? '· ' + fmtDate(r.start_ms) : ''}
+      </div>
+
+      <!-- multi-colour bar -->
+      <div class="flex w-full rounded overflow-hidden mb-3" style="height:8px">
+        <div style="width:${pw}%; background:#22c55e"></div>
+        <div style="width:${fw}%; background:#ef4444"></div>
+        <div style="width:${bw}%; background:#f97316"></div>
+        <div style="width:${sw}%; background:#475569"></div>
+      </div>
+
+      <!-- counts + test count trend -->
+      <div class="flex items-end justify-between">
+        <div class="flex gap-2 text-[10px] flex-wrap">
+          <span class="text-green-400">✓ ${r.passed}</span>
+          <span class="text-red-400">✗ ${r.failed}</span>
+          ${r.broken  ? `<span class="text-orange-400">⚠ ${r.broken}</span>`  : ''}
+          ${r.skipped ? `<span class="text-slate-400">⊘ ${r.skipped}</span>` : ''}
+        </div>
+        <div class="opacity-60">${sparkline(p.trend_total, '#64748b')}</div>
+      </div>
+
+      <!-- duration + primary metric -->
+      <div class="flex items-center justify-between mt-2">
+        <div class="text-[10px] text-slate-500">${fmtDuration(r.duration_ms)}</div>
+        ${p.metric_latest ? (() => {
+          const ml = p.metric_latest;
+          const unit = (config.metrics && config.metrics[0] && config.metrics[0].unit) || '';
+          const cls = ml.test_status === 'passed' ? 'text-green-400' : 'text-red-400';
+          return `<div class="flex items-center gap-1.5">
+            <div class="opacity-60">${sparkline(p.metric_trend, ml.test_status === 'passed' ? '#22c55e' : '#ef4444')}</div>
+            <span class="text-[10px] font-medium ${cls}">${ml.value.toFixed(1)}${unit}</span>
+          </div>`;
+        })() : ''}
+      </div>
+    `;
+
+    grid.appendChild(card);
+  });
+}
+
+// ── Detail panel ────────────────────────────────────────────
+async function openDetail(p) {
+  const panel    = document.getElementById('detail-panel');
+  const backdrop = document.getElementById('backdrop');
+
+  _detailProjectId    = p.id;
+  _detailSelectedRuns = [];
+  _updateCompareBtn();
+  switchDetailTab('overview');
+
+  // header
+  document.getElementById('panel-title').textContent    = cardTitle(p);
+  document.getElementById('panel-subtitle').textContent = badgeDims().map(d => projDimLabel(p, d.key)).join(' · ');
+  document.getElementById('panel-project-id').textContent = p.id;
+  document.getElementById('panel-allure-link').href =
+    `${config.allure_base_url}/projects/${p.id}/reports/latest/index.html`;
+
+  // pass% badge in header
+  const badge = document.getElementById('panel-pass-badge');
+  const pct = effPct(p.latest_run?.passed, p.latest_run?.total, p.latest_run?.skipped);
+  if (pct !== null && pct !== undefined) {
+    badge.textContent = pct + '%';
+    badge.className = 'shrink-0 text-xs font-bold px-2 py-0.5 rounded-full';
+    const bg = pct >= 90 ? 'bg-green-900/60 text-green-300' : pct >= 70 ? 'bg-yellow-900/60 text-yellow-300' : pct >= 50 ? 'bg-orange-900/60 text-orange-300' : 'bg-red-900/60 text-red-300';
+    badge.classList.add(...bg.split(' '));
+    badge.classList.remove('hidden');
+  } else {
+    badge.classList.add('hidden');
+  }
+
+  // latest stats
+  const r = p.latest_run;
+  const statItems = [
+    { label: 'Total',   value: r.total,   color: 'text-slate-100' },
+    { label: 'Passed',  value: r.passed,  color: 'text-green-400' },
+    { label: 'Failed',  value: r.failed,  color: 'text-red-400'   },
+    { label: 'Broken',  value: r.broken,  color: 'text-orange-400'},
+    { label: 'Skipped', value: r.skipped, color: 'text-slate-400' },
+  ];
+  const total = statItems.shift(); // first item is Total
+  document.getElementById('panel-stats').innerHTML = `
+    <div class="text-center pr-3 border-r border-slate-700">
+      <div class="text-2xl font-bold ${total.color}">${total.value ?? '—'}</div>
+      <div class="text-[10px] text-slate-500 mt-0.5">${total.label}</div>
+    </div>
+    <div class="col-span-4 grid grid-cols-2 gap-x-4 gap-y-1 pl-1">
+      ${statItems.map(s => `
+        <div class="flex items-baseline gap-1.5">
+          <span class="text-lg font-bold ${s.color}">${s.value ?? '—'}</span>
+          <span class="text-[10px] text-slate-500">${s.label}</span>
+        </div>
+      `).join('')}
+    </div>
+  `;
+
+  // pass/fail colour bar
+  const panelBar = document.getElementById('panel-bar');
+  if (panelBar) {
+    const tot = r.total || 1;
+    const pw = (r.passed  / tot * 100).toFixed(1);
+    const fw = (r.failed  / tot * 100).toFixed(1);
+    const bw = (r.broken  / tot * 100).toFixed(1);
+    const sw = (r.skipped / tot * 100).toFixed(1);
+    panelBar.innerHTML =
+      `<div style="width:${pw}%;background:#22c55e"></div>` +
+      `<div style="width:${fw}%;background:#ef4444"></div>` +
+      `<div style="width:${bw}%;background:#f97316"></div>` +
+      `<div style="width:${sw}%;background:#475569"></div>`;
+  }
+
+  // open
+  panel.classList.add('open');
+  backdrop.classList.remove('hidden');
+  document.body.style.overflow = 'hidden';
+
+  // fetch runs and metrics first so chart and table render immediately
+  try {
+    const [runs, metricsData, cliTop] = await Promise.all([
+      fetch(`/api/projects/${p.id}/runs?limit=60`).then(r => {
+        if (!r.ok) throw new Error(`runs fetch failed: ${r.status}`);
+        return r.json();
+      }),
+      fetch(`/api/projects/${p.id}/metrics`).then(r => r.ok ? r.json() : []),
+      fetch(`/api/projects/${p.id}/cli-top?n=5`).then(r => r.ok ? r.json() : []),
+    ]);
+    _detailCliTop = cliTop;
+    _detailRuns = runs;
+    _detailNewCounts = {};
+    _detailNewFailsCache = {};
+    _allFailsCache = {};
+    _skippedCache = {};
+    _jiraRunCache = {};
+    drawHistoryChart(runs);
+    drawDurationChart(runs);
+    drawMetricCharts(metricsData);
+    drawRunsTable(runs, p.id, metricsData);
+    renderNewFailsList();
+    renderAllFailsList();
+    renderSkippedList();
+    renderJiraList();
+
+    // load new-counts in background and update chart + New Fails list when ready
+    fetch(`/api/projects/${encodeURIComponent(p.id)}/runs/new-counts?limit=60`)
+      .then(r => r.ok ? r.json() : [])
+      .then(newCounts => {
+        if (_detailProjectId !== p.id) return;
+        (newCounts || []).forEach(c => {
+          _detailNewCounts[c.report_number] = { new_fail_count: c.new_fail_count ?? 0, new_pass_count: c.new_pass_count ?? 0 };
+        });
+        drawHistoryChart(_detailRuns);
+        renderNewFailsList();
+      })
+      .catch(e => console.error('Failed to load new-counts:', e));
+
+    // pre-load full new-fails for recent runs in background (so expanding is instant when ready)
+    const recentRunNumbers = runs.slice(0, 15).map(r => r.report_number);
+    const preloadPromises = recentRunNumbers.map(rn =>
+      fetch(`/api/projects/${encodeURIComponent(p.id)}/runs/${rn}/new-fails`)
+        .then(r => r.ok ? r.json() : null)
+        .then(data => {
+          if (_detailProjectId !== p.id || !data) return;
+          _detailNewFailsCache[rn] = data;
+          const count = data.total_new_fail_count ?? (data.new_failed_tests?.length ?? 0);
+          if (!_detailNewCounts[rn]) _detailNewCounts[rn] = { new_fail_count: 0, new_pass_count: 0 };
+          _detailNewCounts[rn].new_fail_count = count;
+          const runRow = _detailRuns.find(r => r.report_number === rn);
+          const runEl = document.querySelector(`.new-fails-run[data-report="${rn}"]`);
+          if (runRow && runEl) {
+            const newFailLabel = count === 1 ? '1 new fail' : `${count} new fails`;
+            const badge = runEl.querySelector('.new-fails-badge');
+            if (badge) {
+              badge.textContent = newFailLabel;
+              badge.className = `new-fails-badge text-[10px] font-semibold px-2 py-0.5 rounded-full ${count > 0 ? 'bg-red-900/70 text-red-300 border border-red-700' : 'bg-slate-700/50 text-slate-500'}`;
+            }
+          }
+        })
+        .catch(() => {})
+    );
+    Promise.allSettled(preloadPromises).then(() => {
+      if (_detailProjectId === p.id) drawHistoryChart(_detailRuns);
+    });
+  } catch (e) {
+    console.error('Failed to load runs:', e);
+  }
+}
+
+function closeDetail() {
+  const panel    = document.getElementById('detail-panel');
+  const backdrop = document.getElementById('backdrop');
+  panel.classList.remove('open');
+  backdrop.classList.add('hidden');
+  document.body.style.overflow = '';
+}
+
+function switchDetailTab(tab) {
+  const tabs = ['overview', 'new-fails', 'all-fails', 'skipped', 'jira', 'cli-time'];
+  tabs.forEach(t => {
+    const panel = document.getElementById(t === 'overview' ? 'detail-overview' : `detail-${t}`);
+    const btn = document.getElementById(`detail-tab-${t}`);
+    if (!panel || !btn) return;
+    if (t === tab) {
+      panel.classList.remove('hidden');
+      btn.classList.add('border-blue-500', 'text-blue-400', 'bg-slate-800/50');
+      btn.classList.remove('border-transparent', 'text-slate-400');
+    } else {
+      panel.classList.add('hidden');
+      btn.classList.remove('border-blue-500', 'text-blue-400', 'bg-slate-800/50');
+      btn.classList.add('border-transparent', 'text-slate-400');
+    }
+  });
+
+  // Charts inside hidden panels have zero canvas size; draw lazily.
+  if (tab === 'cli-time') {
+    drawCliChart(_detailCliTop);
+  }
+}
+
+function renderNewFailsList() {
+  const list = document.getElementById('new-fails-list');
+  if (!list || !_detailRuns.length) {
+    if (list) list.innerHTML = '<p class="text-slate-400 text-sm">No runs.</p>';
+    return;
+  }
+  const recent = _detailRuns.slice(0, 30);
+  list.innerHTML = recent.map(r => {
+    const nc = _detailNewCounts[r.report_number];
+    const newFailCount = nc ? (nc.new_fail_count ?? 0) : 0;
+    const newFailLabel = newFailCount === 1 ? '1 new fail' : `${newFailCount} new fails`;
+    const badgeCls = newFailCount > 0
+      ? 'bg-red-900/70 text-red-300 border border-red-700'
+      : 'bg-slate-700/50 text-slate-500';
+    return `
+    <div class="new-fails-run rounded border border-slate-700 overflow-hidden" data-report="${r.report_number}">
+      <button type="button" class="w-full text-left px-3 py-2 flex items-center justify-between bg-slate-800/50 hover:bg-slate-700/50 transition-colors"
+        onclick="toggleRunNewFails(${r.report_number})">
+        <span class="flex items-center gap-2">
+          <span class="text-xs text-slate-300">Run #${r.report_number}</span>
+          <span class="text-[10px] text-slate-500">${fmtDate(r.start_ms)}</span>
+        </span>
+        <span class="flex items-center gap-2">
+          <span class="new-fails-badge text-[10px] font-semibold px-2 py-0.5 rounded-full ${badgeCls}">${newFailLabel}</span>
+          <span class="new-fails-chevron text-slate-500 text-xs">▼</span>
+        </span>
+      </button>
+      <div class="new-fails-content hidden border-t border-slate-700 bg-slate-900/50 px-3 py-2"></div>
+    </div>`;
+  }).join('');
+}
+
+// ── All Fails tab ────────────────────────────────────────────
+let _allFailsCache = {};  // report_number -> data
+
+function renderAllFailsList() {
+  const list = document.getElementById('all-fails-list');
+  if (!list || !_detailRuns.length) {
+    if (list) list.innerHTML = '<p class="text-slate-400 text-sm">No runs.</p>';
+    return;
+  }
+  const recent = _detailRuns.slice(0, 30);
+  list.innerHTML = recent.map(r => {
+    const total = (r.failed || 0) + (r.broken || 0);
+    const label = total === 1 ? '1 fail' : `${total} fails`;
+    const badgeCls = total > 0
+      ? 'bg-red-900/70 text-red-300 border border-red-700'
+      : 'bg-slate-700/50 text-slate-500';
+    return `
+    <div class="all-fails-run rounded border border-slate-700 overflow-hidden" data-report="${r.report_number}">
+      <button type="button" class="w-full text-left px-3 py-2 flex items-center justify-between bg-slate-800/50 hover:bg-slate-700/50 transition-colors"
+        onclick="toggleRunAllFails(${r.report_number})">
+        <span class="flex items-center gap-2">
+          <span class="text-xs text-slate-300">Run #${r.report_number}</span>
+          <span class="text-[10px] text-slate-500">${fmtDate(r.start_ms)}</span>
+        </span>
+        <span class="flex items-center gap-2">
+          <span class="all-fails-badge text-[10px] font-semibold px-2 py-0.5 rounded-full ${badgeCls}">${label}</span>
+          <span class="all-fails-chevron text-slate-500 text-xs">▶</span>
+        </span>
+      </button>
+      <div class="all-fails-content hidden border-t border-slate-700 bg-slate-900/50 px-3 py-2"></div>
+    </div>`;
+  }).join('');
+}
+
+async function toggleRunAllFails(reportNumber) {
+  const runEl = document.querySelector(`.all-fails-run[data-report="${reportNumber}"]`);
+  if (!runEl) return;
+  const content = runEl.querySelector('.all-fails-content');
+  const chevron = runEl.querySelector('.all-fails-chevron');
+  const isOpen = !content.classList.contains('hidden');
+  // collapse all
+  document.querySelectorAll('.all-fails-run .all-fails-content').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.all-fails-chevron').forEach(el => { el.textContent = '▶'; });
+  if (isOpen) return;
+
+  content.classList.remove('hidden');
+  chevron.textContent = '▼';
+  if (content.dataset.loaded === 'true') return;
+
+  if (_allFailsCache[reportNumber]) {
+    content.dataset.loaded = 'true';
+    _renderAllFailsData(content, _allFailsCache[reportNumber], reportNumber);
+    return;
+  }
+
+  content.innerHTML = '<p class="text-slate-500 text-xs py-1">Loading…</p>';
+  try {
+    const r = await fetch(`/api/projects/${encodeURIComponent(_detailProjectId)}/runs/${reportNumber}/all-fails`);
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || r.status);
+    _allFailsCache[reportNumber] = data;
+    content.dataset.loaded = 'true';
+    _renderAllFailsData(content, data, reportNumber);
+  } catch (e) {
+    content.innerHTML = `<p class="text-red-400 text-xs">Failed to load: ${escapeHtml(e.message)}</p>`;
+  }
+}
+
+function _renderAllFailsData(content, data, reportNumber) {
+  const tests = data.all_failed_tests || [];
+  if (!tests.length) {
+    content.innerHTML = '<p class="text-slate-400 text-xs py-1">No failed tests.</p>';
+    return;
+  }
+
+  const allureBase = config.allure_base_url || '';
+  const groups = {};
+  for (const t of tests) {
+    const g = _failGroup(t);
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(t);
+  }
+
+  const sortedGroups = Object.keys(groups).sort((a, b) => _failGroupOrder(a) - _failGroupOrder(b));
+  const DETAIL_COLLAPSE_THRESHOLD = 400;
+
+  content.innerHTML = sortedGroups.map((groupName, gi) => {
+    const groupTests = groups[groupName];
+    const dotCls = _failGroupColor(groupName);
+
+    let groupHint = '';
+    if (groupName === 'Core Dump') {
+      const dumps = [...new Set(groupTests.flatMap(t => {
+        const details = _parseDutDetails(t.statusMessage || '');
+        const perDut = details?.core_dump_check?.new_core_dumps || {};
+        return Object.values(perDut).flat();
+      }))];
+      if (dumps.length) groupHint = `<span class="text-[10px] text-red-300/70 font-mono ml-2 truncate">${escapeHtml(dumps.slice(0,2).join(', '))}${dumps.length > 2 ? ` +${dumps.length-2}` : ''}</span>`;
+    } else if (groupName === 'Config DB Modified') {
+      const modules = [...new Set(groupTests.map(t => _coreDumpModule(t.statusMessage || '')).filter(Boolean))];
+      if (modules.length) groupHint = `<span class="text-[10px] text-slate-500 font-mono ml-2 truncate">${escapeHtml(modules.slice(0,2).join(', '))}${modules.length > 2 ? ` +${modules.length-2} more` : ''}</span>`;
+    }
+
+    const isOpen = false;
+    const testsHtml = '<ul class="space-y-1.5 text-xs pt-2">' + groupTests.map(t => {
+      const area = _featureArea(t.name);
+      const areaTag = area ? `<span class="ml-1.5 text-[9px] px-1.5 py-0.5 rounded bg-slate-700 text-slate-400 font-mono">${area}</span>` : '';
+      const hasPassFalse = /"pass"\s*:\s*false/i.test(t.statusMessage || '');
+      const liClass = hasPassFalse
+        ? 'border-l-4 border-red-500 bg-red-950/40 rounded-r pl-2 py-2'
+        : 'border-l-2 border-red-500/70 pl-2 py-1';
+      const allureUrl = t.uid && allureBase
+        ? `${allureBase}/projects/${encodeURIComponent(_detailProjectId)}/reports/${reportNumber}/index.html#testresult/${t.uid}`
+        : null;
+      const nameEl = allureUrl
+        ? `<a href="${allureUrl}" target="_blank" class="font-medium text-red-300 hover:underline hover:text-blue-400 break-all">${escapeHtml(t.name)}</a>${areaTag} <span class="text-blue-400 opacity-60">↗</span>`
+        : `<span class="font-medium text-red-300 break-all">${escapeHtml(t.name)}</span>${areaTag}`;
+      let detailHtml = '';
+      if (t.statusMessage) {
+        const msg = t.statusMessage;
+        const isLong = msg.length > DETAIL_COLLAPSE_THRESHOLD;
+        const escaped = linkifyJira(highlightPassFalse(escapeHtml(msg)));
+        if (isLong) {
+          const preview = linkifyJira(highlightPassFalse(escapeHtml(msg.slice(0, DETAIL_COLLAPSE_THRESHOLD).trim()) + '…'));
+          detailHtml = `
+          <div class="fail-detail-preview text-slate-400 mt-0.5 whitespace-pre-wrap break-words">${preview}</div>
+          <button type="button" class="fail-detail-toggle text-slate-500 hover:text-slate-300 text-xs mt-0.5 cursor-pointer" onclick="var p=this.previousElementSibling; var f=this.nextElementSibling; p.classList.toggle('hidden'); f.classList.toggle('hidden'); this.textContent=f.classList.contains('hidden')?'Show details ▼':'Hide details ▲';">Show details ▼</button>
+          <div class="fail-detail-full hidden text-slate-400 mt-0.5 whitespace-pre-wrap break-words max-h-60 overflow-y-auto border border-slate-700 rounded p-2">${escaped}</div>`;
+        } else {
+          detailHtml = `<div class="text-slate-400 mt-0.5 whitespace-pre-wrap break-words">${escaped}</div>`;
+        }
+      }
+      return `<li class="${liClass}"><div>${nameEl}</div>${detailHtml}</li>`;
+    }).join('') + '</ul>';
+
+    return `
+    <div class="rounded border border-slate-700 overflow-hidden mb-2">
+      <button type="button"
+        class="w-full flex items-center justify-between px-3 py-2 bg-slate-800/50 hover:bg-slate-700/50 transition-colors text-xs font-medium"
+        onclick="(function(btn){var body=btn.nextElementSibling;var open=!body.classList.contains('hidden');body.classList.toggle('hidden',open);btn.querySelector('.afg-chevron').textContent=open?'▼':'▶';})(this)">
+        <span class="flex items-center gap-2">
+          <span class="${dotCls}">●</span>
+          <span class="text-slate-200">${escapeHtml(groupName)}</span>
+          ${groupHint}
+        </span>
+        <span class="flex items-center gap-2">
+          <span class="px-1.5 py-0.5 rounded-full bg-slate-700 text-[10px] font-bold text-slate-300">${groupTests.length}</span>
+          <span class="afg-chevron text-slate-500 text-xs">${isOpen ? '▼' : '▶'}</span>
+        </span>
+      </button>
+      <div class="${isOpen ? '' : 'hidden'} px-3 pb-3 bg-slate-900/60">${testsHtml}</div>
+    </div>`;
+  }).join('');
+
+  loadJiraStatuses(content);
+}
+
+async function toggleRunNewFails(reportNumber) {
+  const runEl = document.querySelector(`.new-fails-run[data-report="${reportNumber}"]`);
+  if (!runEl) return;
+  const content = runEl.querySelector('.new-fails-content');
+  const chevron = runEl.querySelector('.new-fails-chevron');
+  const isOpen = !content.classList.contains('hidden');
+  document.querySelectorAll('.new-fails-run .new-fails-content').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.new-fails-chevron').forEach(el => { el.textContent = '▼'; });
+  if (isOpen) {
+    content.classList.add('hidden');
+    chevron.textContent = '▼';
+    return;
+  }
+  content.classList.remove('hidden');
+  chevron.textContent = '▲';
+  if (content.dataset.loaded === 'true') return;
+
+  if (_detailNewFailsCache[reportNumber]) {
+    content.dataset.loaded = 'true';
+    renderNewFailsData(content, _detailNewFailsCache[reportNumber], reportNumber, runEl);
+    return;
+  }
+
+  content.innerHTML = '<p class="text-slate-500 text-xs">Loading…</p>';
+  try {
+    const r = await fetch(`/api/projects/${encodeURIComponent(_detailProjectId)}/runs/${reportNumber}/new-fails`);
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || r.status);
+    _detailNewFailsCache[reportNumber] = data;
+    content.dataset.loaded = 'true';
+    renderNewFailsData(content, data, reportNumber, runEl);
+  } catch (e) {
+    content.innerHTML = `<p class="text-red-400 text-xs">Failed to load: ${escapeHtml(e.message)}</p>`;
+  }
+}
+
+// ── New-fails grouping helpers ───────────────────────────────
+function _parseDutDetails(msg) {
+  // Extract and parse the JSON blob after "Details:"
+  const m = msg.match(/Details:\s*(\{[\s\S]*)/);
+  if (!m) return null;
+  try { return JSON.parse(m[1]); } catch { return null; }
+}
+
+function _failGroup(t) {
+  const msg = t.statusMessage || '';
+  if (msg.includes('DUT HEALTH CHECK FAILED')) {
+    const details = _parseDutDetails(msg);
+    if (details) {
+      const failedChecks = Object.entries(details)
+        .filter(([, v]) => v && v.pass === false)
+        .map(([k]) => k);
+      if (failedChecks.includes('core_dump_check'))  return 'Core Dump';
+      if (failedChecks.includes('config_db_check'))  return 'Config DB Modified';
+      if (failedChecks.length)                       return `DUT State (${failedChecks[0]})`;
+    }
+    return 'DUT State';
+  }
+  if (msg.includes('LogAnalyzer failure'))     return 'LogAnalyzer';
+  if (msg.includes('RunAnsibleModuleFail'))    return 'Ansible Error';
+  if (msg.includes('AssertionError'))          return 'Assertion / Logic';
+  return 'Other';
+}
+
+function _failGroupOrder(g) {
+  if (g === 'Core Dump')          return 0;
+  if (g === 'Config DB Modified') return 1;
+  if (g.startsWith('DUT State'))  return 2;
+  if (g === 'LogAnalyzer')        return 3;
+  if (g === 'Assertion / Logic')  return 4;
+  if (g === 'Ansible Error')      return 5;
+  return 6;
+}
+
+function _failGroupColor(g) {
+  if (g === 'Core Dump')          return 'text-red-400';
+  if (g === 'Config DB Modified') return 'text-orange-400';
+  if (g.startsWith('DUT State'))  return 'text-orange-400';
+  if (g === 'LogAnalyzer')        return 'text-yellow-400';
+  if (g === 'Assertion / Logic')  return 'text-red-400';
+  if (g === 'Ansible Error')      return 'text-purple-400';
+  return 'text-slate-500';
+}
+
+function _featureArea(name) {
+  const base = name.replace(/\[.*\]$/, '').toLowerCase();
+  if (/bgp/.test(base))                    return 'BGP';
+  if (/dhcp/.test(base))                   return 'DHCP';
+  if (/pvst|stp|bpdu/.test(base))          return 'PVST/STP';
+  if (/ospf/.test(base))                   return 'OSPF';
+  if (/lldp/.test(base))                   return 'LLDP';
+  if (/static_route|ecmp/.test(base))      return 'Routing';
+  if (/vlan|l2_|l3_/.test(base))           return 'VLAN/L2';
+  if (/qos/.test(base))                    return 'QoS';
+  if (/lag|portchannel|po_update/.test(base)) return 'LAG';
+  if (/syslog/.test(base))                 return 'Syslog';
+  if (/scp/.test(base))                    return 'SCP';
+  if (/acl/.test(base))                    return 'ACL';
+  if (/interface|port_toggle|portstat|port_speed/.test(base)) return 'Interfaces';
+  if (/ipfwd|dip_sip|dir_bcast|ip_packet/.test(base))        return 'IP Forwarding';
+  return null;
+}
+
+function _coreDumpModule(msg) {
+  const m = msg.match(/Module '([^']+)'/);
+  return m ? m[1] : null;
+}
+
+
+function renderNewFailsData(content, data, reportNumber, runEl) {
+  const count = data.total_new_fail_count ?? (data.new_failed_tests?.length ?? 0);
+  if (!_detailNewCounts[reportNumber]) _detailNewCounts[reportNumber] = { new_fail_count: 0, new_pass_count: 0 };
+  _detailNewCounts[reportNumber].new_fail_count = count;
+  const runRow = _detailRuns.find(r => r.report_number === reportNumber);
+  if (runRow && runEl) {
+    const newFailLabel = count === 1 ? '1 new fail' : `${count} new fails`;
+    const badge = runEl.querySelector('.new-fails-badge');
+    if (badge) {
+      badge.textContent = newFailLabel;
+      badge.className = `new-fails-badge text-[10px] font-semibold px-2 py-0.5 rounded-full ${count > 0 ? 'bg-red-900/70 text-red-300 border border-red-700' : 'bg-slate-700/50 text-slate-500'}`;
+    }
+  }
+  if (_detailRuns.length) drawHistoryChart(_detailRuns);
+
+  const noteHtml = data.new_fails_note
+    ? `<p class="text-amber-400/80 text-xs mb-2">${escapeHtml(data.new_fails_note)}</p>`
+    : '';
+  if (!data.new_fails_note && (!data.new_failed_tests || !data.new_failed_tests.length)) {
+    content.innerHTML = '<p class="text-slate-400 text-xs">No new fails vs previous run.</p>';
+    return;
+  }
+
+  const allureBase = config.allure_base_url || '';
+
+  // Group tests by failure type
+  const groups = {};
+  for (const t of data.new_failed_tests) {
+    const g = _failGroup(t);
+    if (!groups[g]) groups[g] = [];
+    groups[g].push(t);
+  }
+
+  const sortedGroups = Object.keys(groups).sort((a, b) => _failGroupOrder(a) - _failGroupOrder(b));
+
+  const groupsHtml = sortedGroups.map((groupName, gi) => {
+    const tests = groups[groupName];
+    const colors = _failGroupColor(groupName);
+    const groupId = `nf-group-${reportNumber}-${gi}`;
+
+    // Group-specific hints in the header
+    let groupHint = '';
+    if (groupName === 'Core Dump') {
+      // Show the actual dump filenames
+      const dumps = [...new Set(tests.flatMap(t => {
+        const details = _parseDutDetails(t.statusMessage || '');
+        const perDut = details?.core_dump_check?.new_core_dumps || {};
+        return Object.values(perDut).flat();
+      }))];
+      if (dumps.length) {
+        groupHint = `<span class="text-[10px] text-red-300/70 font-mono ml-2 truncate" title="${escapeHtml(dumps.join(', '))}">${escapeHtml(dumps.slice(0, 2).join(', '))}${dumps.length > 2 ? ` +${dumps.length - 2}` : ''}</span>`;
+      }
+    } else if (groupName === 'Config DB Modified') {
+      const modules = [...new Set(tests.map(t => _coreDumpModule(t.statusMessage || '')).filter(Boolean))];
+      if (modules.length) {
+        groupHint = `<span class="text-[10px] text-slate-500 font-mono ml-2 truncate" title="${escapeHtml(modules.join(', '))}">${escapeHtml(modules.slice(0, 2).join(', '))}${modules.length > 2 ? ` +${modules.length - 2} more` : ''}</span>`;
+      }
+    }
+
+    // Sub-group by feature area (show as inline tags on each test name row)
+    const testsHtml = '<ul class="space-y-1.5 text-xs pt-2">' +
+      tests.map(t => {
+        const area = _featureArea(t.name);
+        const areaTag = area ? `<span class="ml-1.5 text-[9px] px-1.5 py-0.5 rounded bg-slate-700 text-slate-400 font-mono">${area}</span>` : '';
+        const DETAIL_COLLAPSE_THRESHOLD = 400;
+        const PASS_FALSE_RE = /"pass"\s*:\s*false/i;
+        const hasPassFalse = PASS_FALSE_RE.test(t.statusMessage || '');
+        const liClass = hasPassFalse
+          ? 'border-l-4 border-red-500 bg-red-950/40 rounded-r pl-2 py-2'
+          : 'border-l-2 border-red-500/70 pl-2 py-1';
+        const allureUrl = t.uid && allureBase
+          ? `${allureBase}/projects/${encodeURIComponent(_detailProjectId)}/reports/${reportNumber}/index.html#testresult/${t.uid}`
+          : null;
+        const nameEl = allureUrl
+          ? `<a href="${allureUrl}" target="_blank" class="font-medium text-red-300 hover:underline hover:text-blue-400 break-all">${escapeHtml(t.name)}</a>${areaTag} <span class="text-blue-400 opacity-60">↗</span>`
+          : `<span class="font-medium text-red-300 break-all">${escapeHtml(t.name)}</span>${areaTag}`;
+        let detailHtml = '';
+        if (t.statusMessage) {
+          const msg = t.statusMessage;
+          const isLong = msg.length > DETAIL_COLLAPSE_THRESHOLD;
+          const escaped = linkifyJira(highlightPassFalse(escapeHtml(msg)));
+          if (isLong) {
+            const preview = linkifyJira(highlightPassFalse(escapeHtml(msg.slice(0, DETAIL_COLLAPSE_THRESHOLD).trim()) + '…'));
+            detailHtml = `
+            <div class="fail-detail-preview text-slate-400 mt-0.5 whitespace-pre-wrap break-words">${preview}</div>
+            <button type="button" class="fail-detail-toggle text-slate-500 hover:text-slate-300 text-xs mt-0.5 cursor-pointer" onclick="var p=this.previousElementSibling; var f=this.nextElementSibling; p.classList.toggle('hidden'); f.classList.toggle('hidden'); this.textContent=f.classList.contains('hidden')?'Show details ▼':'Hide details ▲';">Show details ▼</button>
+            <div class="fail-detail-full hidden text-slate-400 mt-0.5 whitespace-pre-wrap break-words max-h-60 overflow-y-auto border border-slate-700 rounded p-2">${escaped}</div>`;
+          } else {
+            detailHtml = `<div class="text-slate-400 mt-0.5 whitespace-pre-wrap break-words">${escaped}</div>`;
+          }
+        }
+        return `<li class="${liClass}"><div>${nameEl}</div>${detailHtml}</li>`;
+      }).join('') + '</ul>';
+
+    // First group expanded, rest collapsed
+    const isOpen = false;
+    const dotCls = _failGroupColor(groupName);
+    return `
+    <div class="rounded border border-slate-700 overflow-hidden mb-2">
+      <button type="button"
+        class="w-full flex items-center justify-between px-3 py-2 bg-slate-800/50 hover:bg-slate-700/50 transition-colors text-xs font-medium"
+        onclick="(function(btn){var body=btn.nextElementSibling;var open=!body.classList.contains('hidden');body.classList.toggle('hidden',open);btn.querySelector('.nfg-chevron').textContent=open?'▼':'▶';})(this)">
+        <span class="flex items-center gap-2">
+          <span class="${dotCls}">●</span>
+          <span class="text-slate-200">${escapeHtml(groupName)}</span>
+          ${groupHint}
+        </span>
+        <span class="flex items-center gap-2">
+          <span class="px-1.5 py-0.5 rounded-full bg-slate-700 text-[10px] font-bold text-slate-300">${tests.length}</span>
+          <span class="nfg-chevron text-slate-500 text-xs">${isOpen ? '▼' : '▶'}</span>
+        </span>
+      </button>
+      <div class="${isOpen ? '' : 'hidden'} px-3 pb-3 bg-slate-900/60">
+        ${testsHtml}
+      </div>
+    </div>`;
+  }).join('');
+
+  content.innerHTML = noteHtml + groupsHtml;
+  loadJiraStatuses(content);
+}
+
+function renderSkippedList() {
+  const list = document.getElementById('skipped-list');
+  if (!list || !_detailRuns.length) {
+    if (list) list.innerHTML = '<p class="text-slate-400 text-sm">No runs.</p>';
+    return;
+  }
+  const recent = _detailRuns.slice(0, 30);
+  list.innerHTML = recent.map(r => {
+    const count = r.skipped || 0;
+    const label = count === 1 ? '1 skipped' : `${count} skipped`;
+    return `
+    <div class="skipped-run rounded border border-slate-700 overflow-hidden" data-report="${r.report_number}">
+      <button type="button" class="w-full text-left px-3 py-2 flex items-center justify-between bg-slate-800/50 hover:bg-slate-700/50 text-sm text-slate-200 transition-colors"
+        onclick="toggleRunSkipped(${r.report_number})">
+        <span>Run #${r.report_number} · ${fmtDate(r.start_ms)} · <span class="text-slate-400">${label}</span></span>
+        <span class="skipped-chevron text-slate-500">▼</span>
+      </button>
+      <div class="skipped-content hidden border-t border-slate-700 bg-slate-900/50 px-3 py-2"></div>
+    </div>`;
+  }).join('');
+}
+
+let _skippedCache = {};  // report_number -> skipped_tests array
+
+async function toggleRunSkipped(reportNumber) {
+  const runEl = document.querySelector(`.skipped-run[data-report="${reportNumber}"]`);
+  if (!runEl) return;
+  const content = runEl.querySelector('.skipped-content');
+  const chevron = runEl.querySelector('.skipped-chevron');
+  const isOpen = !content.classList.contains('hidden');
+  document.querySelectorAll('.skipped-run .skipped-content').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.skipped-chevron').forEach(el => { el.textContent = '▼'; });
+  if (isOpen) {
+    content.classList.add('hidden');
+    chevron.textContent = '▼';
+    return;
+  }
+  content.classList.remove('hidden');
+  chevron.textContent = '▲';
+  if (content.dataset.loaded === 'true') return;
+
+  if (_skippedCache[reportNumber]) {
+    content.dataset.loaded = 'true';
+    renderSkippedData(content, _skippedCache[reportNumber], reportNumber);
+    return;
+  }
+
+  content.innerHTML = '<p class="text-slate-500 text-xs">Loading…</p>';
+  try {
+    const r = await fetch(`/api/projects/${encodeURIComponent(_detailProjectId)}/runs/${reportNumber}/skipped`);
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || r.status);
+    _skippedCache[reportNumber] = data.skipped_tests;
+    content.dataset.loaded = 'true';
+    renderSkippedData(content, data.skipped_tests, reportNumber);
+  } catch (e) {
+    content.innerHTML = `<p class="text-red-400 text-xs">Failed to load: ${escapeHtml(e.message)}</p>`;
+  }
+}
+
+function jiraBrowseBase() {
+  const base = (config.jira_base_url || '').replace(/\/+$/, '');
+  return base ? `${base}/browse/` : '';
+}
+
+function linkifyJira(html) {
+  const BASE = jiraBrowseBase();
+  // Replace full Jira URLs — show only the ticket ID as link text, tag with data-jira
+  html = html.replace(
+    /https?:\/\/[^\s<>"]+\/browse\/([A-Z]+-\d+)[^\s<>"]*/gi,
+    (url, ticket) => `<a href="${url}" target="_blank" data-jira="${ticket}" class="text-blue-400 hover:underline">${ticket} ↗</a>`
+  );
+  // Replace bare ticket IDs, leaving already-linked <a>…</a> blocks untouched
+  return html.replace(/(<a[\s\S]*?<\/a>)|(\b(?!UTF-\d+\b)[A-Z]{2,5}-\d+\b)/g, (m, link, ticket) =>
+    link || (BASE
+      ? `<a href="${BASE}${ticket}" target="_blank" data-jira="${ticket}" class="text-blue-400 hover:underline">${ticket} ↗</a>`
+      : `<span data-jira="${ticket}">${ticket}</span>`)
+  );
+}
+
+const _JIRA_STATUS_COLORS = {
+  'green':     'bg-green-900/60 text-green-300',
+  'yellow':    'bg-yellow-900/60 text-yellow-300',
+  'blue-grey': 'bg-slate-700 text-slate-300',
+};
+
+async function loadJiraStatuses(container) {
+  const links = container.querySelectorAll('a[data-jira]');
+  if (!links.length) return;
+  const tickets = [...new Set([...links].map(a => a.dataset.jira))];
+  try {
+    const r = await fetch(`/api/jira/issues?tickets=${encodeURIComponent(tickets.join(','))}`);
+    if (!r.ok) return;
+    const data = await r.json();
+    links.forEach(a => {
+      const info = data[a.dataset.jira];
+      if (!info || !info.status) return;
+      const colorClass = _JIRA_STATUS_COLORS[info.color] || 'bg-slate-700 text-slate-300';
+      const badge = document.createElement('span');
+      badge.className = `inline-block ml-1 px-1 rounded text-[10px] font-medium ${colorClass}`;
+      badge.title = info.summary || '';
+      badge.textContent = info.status;
+      a.after(badge);
+    });
+  } catch (_) { /* silently ignore Jira errors */ }
+}
+
+function renderSkippedData(content, tests, reportNumber) {
+  if (!tests || !tests.length) {
+    content.innerHTML = '<p class="text-slate-400 text-xs">No skipped tests in this run.</p>';
+    return;
+  }
+  const allureBase = config.allure_base_url || '';
+  const COLLAPSE_THRESHOLD = 300;
+  const rows = tests.map(t => {
+    const allureUrl = t.uid && allureBase
+      ? `${allureBase}/projects/${encodeURIComponent(_detailProjectId)}/reports/${reportNumber}/index.html#testresult/${t.uid}`
+      : null;
+    const nameEl = allureUrl
+      ? `<a href="${allureUrl}" target="_blank" class="font-medium text-slate-300 hover:underline hover:text-blue-400 break-all">${escapeHtml(t.name)} ↗</a>`
+      : `<span class="font-medium text-slate-300 break-all">${escapeHtml(t.name)}</span>`;
+    const suiteEl = t.suite_name ? `<span class="text-slate-500 mr-2">${escapeHtml(t.suite_name)}</span>` : '';
+    let reasonHtml = '';
+    if (t.statusMessage) {
+      const msg = t.statusMessage;
+      const escaped = linkifyJira(escapeHtml(msg));
+      if (msg.length > COLLAPSE_THRESHOLD) {
+        const preview = linkifyJira(escapeHtml(msg.slice(0, COLLAPSE_THRESHOLD).trim())) + '…';
+        reasonHtml = `
+        <div class="skip-preview text-slate-400 mt-0.5 whitespace-pre-wrap break-words text-xs">${preview}</div>
+        <button type="button" class="text-slate-500 hover:text-slate-300 text-xs mt-0.5 cursor-pointer" onclick="var p=this.previousElementSibling;var f=this.nextElementSibling;p.classList.toggle('hidden');f.classList.toggle('hidden');this.textContent=f.classList.contains('hidden')?'Show more ▼':'Hide ▲';">Show more ▼</button>
+        <div class="hidden text-slate-400 mt-0.5 whitespace-pre-wrap break-words text-xs max-h-48 overflow-y-auto border border-slate-700 rounded p-2">${escaped}</div>`;
+      } else {
+        reasonHtml = `<div class="text-slate-400 mt-0.5 whitespace-pre-wrap break-words text-xs">${escaped}</div>`;
+      }
+    }
+    return `<li class="border-l-2 border-slate-500/50 pl-2 py-1">
+      <div class="text-xs">${suiteEl}${nameEl}</div>
+      ${reasonHtml}
+    </li>`;
+  }).join('');
+  content.innerHTML = `<ul class="space-y-2 text-xs">${rows}</ul>`;
+  loadJiraStatuses(content);
+}
+
+// ── Jira tab ─────────────────────────────────────────────────
+
+let _jiraRunCache = {};  // report_number -> [{ticket, status, color, summary, tests[]}]
+
+function renderJiraList() {
+  const list = document.getElementById('jira-list');
+  if (!list || !_detailRuns.length) {
+    if (list) list.innerHTML = '<p class="text-slate-400 text-sm">No runs.</p>';
+    return;
+  }
+  const recent = _detailRuns.slice(0, 30);
+  list.innerHTML = recent.map(r => {
+    const label = _jiraRunScanLabel(r);
+    return `
+    <div class="jira-run rounded border border-slate-700 overflow-hidden" data-report="${r.report_number}">
+      <button type="button" class="w-full text-left px-3 py-2 flex items-center justify-between bg-slate-800/50 hover:bg-slate-700/50 text-sm text-slate-200 transition-colors"
+        onclick="toggleRunJira(${r.report_number})">
+        <span>Run #${r.report_number} · ${fmtDate(r.start_ms)} · <span class="text-slate-400">${label}</span></span>
+        <span class="jira-chevron text-slate-500">▼</span>
+      </button>
+      <div class="jira-content hidden border-t border-slate-700 bg-slate-900/50 px-3 py-2"></div>
+    </div>`;
+  }).join('');
+}
+
+function _jiraRunScanLabel(run) {
+  const failed = run.failed || 0;
+  const broken = run.broken || 0;
+  const skip = run.skipped || 0;
+  return `${failed} failed · ${broken} broken · ${skip} skipped`;
+}
+
+async function toggleRunJira(reportNumber) {
+  const runEl = document.querySelector(`.jira-run[data-report="${reportNumber}"]`);
+  if (!runEl) return;
+  const content = runEl.querySelector('.jira-content');
+  const chevron = runEl.querySelector('.jira-chevron');
+  const isOpen = !content.classList.contains('hidden');
+  document.querySelectorAll('.jira-run .jira-content').forEach(el => el.classList.add('hidden'));
+  document.querySelectorAll('.jira-chevron').forEach(el => { el.textContent = '▼'; });
+  if (isOpen) { content.classList.add('hidden'); chevron.textContent = '▼'; return; }
+  content.classList.remove('hidden');
+  chevron.textContent = '▲';
+  if (content.dataset.loaded === 'true') return;
+
+  if (_jiraRunCache[reportNumber]) {
+    content.dataset.loaded = 'true';
+    _updateJiraRunLabel(runEl, reportNumber, _jiraRunCache[reportNumber].length);
+    renderJiraData(content, _jiraRunCache[reportNumber], reportNumber);
+    return;
+  }
+
+  content.innerHTML = '<p class="text-slate-500 text-xs">Loading…</p>';
+  try {
+    const r = await fetch(`/api/projects/${encodeURIComponent(_detailProjectId)}/runs/${reportNumber}/jira-tests`);
+    const data = await r.json();
+    if (!r.ok) throw new Error(data.detail || r.status);
+    const tests = data.tests || [];
+
+    // Ticket ids are extracted on the server from the Allure status message,
+    // trace, and links. Fall back to the message text for older responses.
+    const ticketRE = /\b(?!UTF-\d+\b)([A-Z]{2,5}-\d+)\b/g;
+    const ticketTests = {};  // ticket -> [{name, uid, status}, ...]
+    for (const t of tests) {
+      const fromServer = Array.isArray(t.tickets) ? t.tickets : null;
+      const ids = fromServer !== null
+        ? fromServer
+        : [...(t.statusMessage || '').matchAll(ticketRE)].map(m => m[1]);
+      const seen = new Set();
+      for (const tk of ids) {
+        if (!tk || seen.has(tk) || /^UTF-\d+$/.test(tk)) continue;
+        seen.add(tk);
+        if (!ticketTests[tk]) ticketTests[tk] = [];
+        ticketTests[tk].push({ name: t.name, uid: t.uid, status: t.status || '' });
+      }
+    }
+
+    const tickets = Object.keys(ticketTests);
+    if (!tickets.length) {
+      content.dataset.loaded = 'true';
+      content.innerHTML = '<p class="text-slate-400 text-xs">No Jira tickets found in skipped, xfail, failed, or broken tests.</p>';
+      _jiraRunCache[reportNumber] = [];
+      return;
+    }
+
+    // Fetch Jira statuses
+    const jr = await fetch(`/api/jira/issues?tickets=${encodeURIComponent(tickets.join(','))}`);
+    const jiraData = jr.ok ? await jr.json() : {};
+
+    const issues = tickets.map(tk => ({
+      ticket: tk,
+      status: jiraData[tk]?.status || '',
+      color:  jiraData[tk]?.color  || '',
+      summary: jiraData[tk]?.summary || '',
+      tests: ticketTests[tk],
+    }));
+
+    _jiraRunCache[reportNumber] = issues;
+    content.dataset.loaded = 'true';
+    _updateJiraRunLabel(runEl, reportNumber, issues.length);
+    renderJiraData(content, issues, reportNumber);
+  } catch (e) {
+    content.innerHTML = `<p class="text-red-400 text-xs">Failed to load: ${escapeHtml(e.message)}</p>`;
+  }
+}
+
+function _updateJiraRunLabel(runEl, reportNumber, count) {
+  const btn = runEl.querySelector('button span:first-child');
+  if (!btn) return;
+  const run = _detailRuns.find(r => r.report_number === reportNumber);
+  if (!run) return;
+  const jiraLabel = count === 1 ? '1 Jira issue' : `${count} Jira issues`;
+  btn.innerHTML = `Run #${reportNumber} · ${fmtDate(run.start_ms)} · <span class="text-slate-400">${_jiraRunScanLabel(run)} · <span class="text-blue-400">${jiraLabel}</span></span>`;
+}
+
+function renderJiraData(content, issues, reportNumber) {
+  if (!issues.length) {
+    content.innerHTML = '<p class="text-slate-400 text-xs">No Jira tickets found in skipped, xfail, failed, or broken tests.</p>';
+    return;
+  }
+  const allureBase = config.allure_base_url || '';
+  const JIRA_BASE = jiraBrowseBase();
+  const COLOR_MAP = { green: 'bg-green-900/60 text-green-300', yellow: 'bg-yellow-900/60 text-yellow-300', 'blue-grey': 'bg-slate-700 text-slate-300' };
+  const rows = issues.map(issue => {
+    const badge = issue.status
+      ? `<span class="inline-block px-1.5 py-0.5 rounded text-[10px] font-semibold ${COLOR_MAP[issue.color] || 'bg-slate-700 text-slate-300'}">${escapeHtml(issue.status)}</span>`
+      : '';
+    const testStatusCls = {
+      failed: 'text-red-400',
+      broken: 'text-orange-400',
+      skipped: 'text-slate-400',
+      xfail: 'text-amber-400',
+    };
+    const testList = issue.tests.map(t => {
+      const allureUrl = t.uid && allureBase
+        ? `${allureBase}/projects/${encodeURIComponent(_detailProjectId)}/reports/${reportNumber}/index.html#testresult/${t.uid}`
+        : null;
+      const statusEl = t.status
+        ? `<span class="${testStatusCls[t.status] || 'text-slate-500'} mr-1">${escapeHtml(t.status)}</span>`
+        : '';
+      const nameEl = allureUrl
+        ? `<a href="${allureUrl}" target="_blank" class="text-slate-400 hover:text-blue-400 hover:underline break-all">${escapeHtml(t.name)} ↗</a>`
+        : `<span class="text-slate-500 break-all">${escapeHtml(t.name)}</span>`;
+      return `<li>${statusEl}${nameEl}</li>`;
+    }).join('');
+    return `
+    <div class="border border-slate-700 rounded overflow-hidden">
+      <div class="flex items-start gap-2 px-3 py-2 bg-slate-800/40">
+        ${JIRA_BASE
+          ? `<a href="${JIRA_BASE}${issue.ticket}" target="_blank" class="font-semibold text-blue-400 hover:underline whitespace-nowrap">${escapeHtml(issue.ticket)} ↗</a>`
+          : `<span class="font-semibold text-slate-200 whitespace-nowrap">${escapeHtml(issue.ticket)}</span>`}
+        ${badge}
+        <span class="text-slate-300 text-xs min-w-0 break-words">${escapeHtml(issue.summary)}</span>
+      </div>
+      <ul class="px-3 py-1.5 space-y-0.5 text-xs border-t border-slate-800">${testList}</ul>
+    </div>`;
+  }).join('');
+  content.innerHTML = `<div class="space-y-2 text-xs">${rows}</div>`;
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  const div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+/** Highlight "pass": false in escaped detail HTML so failed checks stand out. */
+function highlightPassFalse(escapedHtml) {
+  return escapedHtml.replace(/"pass"\s*:\s*false/gi, '<span class="text-red-400 font-semibold">"pass": false</span>');
+}
+
+// ── Charts ──────────────────────────────────────────────────
+const CHART_OPTS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, padding: 10 } } },
+};
+
+function drawHistoryChart(runs) {
+  const ctx = document.getElementById('history-chart').getContext('2d');
+  if (histChart) histChart.destroy();
+
+  // API returns newest-first; charts use chronological order (oldest → newest on x-axis)
+  const chrono = [...runs].reverse();
+  const newFailData = chrono.map(r => _detailNewCounts[r.report_number]?.new_fail_count ?? 0);
+  const newPassData = chrono.map(r => _detailNewCounts[r.report_number]?.new_pass_count ?? 0);
+
+  histChart = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: chrono.map(r => `#${r.report_number}`),
+      datasets: [
+        { label: 'Passed',   data: chrono.map(r => r.passed),  backgroundColor: '#22c55e', stack: 's', order: 2 },
+        { label: 'Failed',   data: chrono.map(r => r.failed),  backgroundColor: '#ef4444', stack: 's', order: 2 },
+        { label: 'Broken',   data: chrono.map(r => r.broken),  backgroundColor: '#f97316', stack: 's', order: 2 },
+        { label: 'Skipped',  data: chrono.map(r => r.skipped), backgroundColor: '#475569', stack: 's', order: 2 },
+        { type: 'line', label: 'New fail', data: newFailData, borderColor: '#dc2626', backgroundColor: 'transparent', fill: false, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#dc2626', yAxisID: 'y', order: 1 },
+        { type: 'line', label: 'New pass', data: newPassData, borderColor: '#16a34a', backgroundColor: 'transparent', fill: false, tension: 0.3, pointRadius: 3, pointBackgroundColor: '#16a34a', yAxisID: 'y', order: 1 },
+      ],
+    },
+    options: {
+      ...CHART_OPTS,
+      scales: {
+        x: {
+          stacked: true,
+          ticks: { maxTicksLimit: 12, maxRotation: 0 },
+          grid: { color: '#1e293b' },
+        },
+        y: { stacked: true, grid: { color: '#1e293b' } },
+      },
+    },
+  });
+}
+
+function drawDurationChart(runs) {
+  const ctx = document.getElementById('duration-chart').getContext('2d');
+  if (durChart) durChart.destroy();
+
+  const chrono = [...runs].reverse();
+  durChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: chrono.map(r => `#${r.report_number}`),
+      datasets: [{
+        label: 'Duration (h)',
+        data: chrono.map(r => r.duration_ms ? +(r.duration_ms / 3600000).toFixed(2) : null),
+        borderColor: '#3b82f6',
+        backgroundColor: '#3b82f620',
+        fill: true,
+        tension: 0.3,
+        pointRadius: 2,
+        spanGaps: true,
+      }],
+    },
+    options: {
+      ...CHART_OPTS,
+      scales: {
+        x: {
+          ticks: { maxTicksLimit: 12, maxRotation: 0 },
+          grid: { color: '#1e293b' },
+        },
+        y: {
+          grid: { color: '#1e293b' },
+          ticks: { callback: v => `${(+v).toFixed(1)}h` },
+        },
+      },
+    },
+  });
+}
+
+const METRIC_SERIES_COLORS = ['#22c55e', '#38bdf8', '#eab308', '#a78bfa', '#f97316'];
+
+function drawMetricCharts(metricsData) {
+  const container = document.getElementById('metric-charts');
+  metricCharts.forEach(ch => ch.destroy());
+  metricCharts = [];
+  container.innerHTML = '';
+
+  (metricsData || []).forEach(metric => {
+    const runs = metric.runs || [];
+    if (!runs.length) return;
+
+    const unit = metric.unit || '';
+    const section = document.createElement('div');
+    const canvasId = `metric-chart-${metricCharts.length}`;
+    section.innerHTML = `
+      <h3 class="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-3">
+        ${escapeHtml(metric.label || metric.name)}${unit ? ` (${escapeHtml(unit)})` : ''}
+      </h3>
+      <div class="relative h-40">
+        <canvas id="${canvasId}"></canvas>
+      </div>`;
+    container.appendChild(section);
+
+    const pointColor = runs.map(b => b.test_status === 'passed' ? '#22c55e' : '#ef4444');
+    // One dataset per series key that has at least one value
+    const keys = (metric.keys || []).filter(k => runs.some(b => b.values[k] != null));
+    const datasets = keys.map((key, ki) => {
+      const color = METRIC_SERIES_COLORS[ki % METRIC_SERIES_COLORS.length];
+      return {
+        label: unit ? `${key} (${unit})` : key,
+        data:  runs.map(b => b.values[key]),
+        borderColor: color,
+        backgroundColor: color + '20',
+        fill: ki === 0,
+        tension: 0.3,
+        pointRadius: 3,
+        pointBackgroundColor: ki === 0 ? pointColor : color,
+        pointBorderColor: ki === 0 ? pointColor : color,
+        spanGaps: true,
+      };
+    });
+
+    const ctx = document.getElementById(canvasId).getContext('2d');
+    metricCharts.push(new Chart(ctx, {
+      type: 'line',
+      data: { labels: runs.map(b => `#${b.report_number}`), datasets },
+      options: {
+        ...CHART_OPTS,
+        plugins: { legend: { display: keys.length > 1 } },
+        scales: {
+          x: {
+            ticks: { maxTicksLimit: 12, maxRotation: 0 },
+            grid: { color: '#1e293b' },
+          },
+          y: {
+            grid: { color: '#1e293b' },
+            ticks: { callback: v => `${v}${unit}` },
+          },
+        },
+      },
+    }));
+  });
+}
+
+// Rank 1 (slowest) = brightest, rank 5 = dimmest
+const CLI_RANK_COLORS = ['#ef4444', '#f97316', '#eab308', '#22c55e', '#38bdf8'];
+
+function drawCliChart(cliTop) {
+  const section = document.getElementById('cli-time-section');
+  const empty   = document.getElementById('cli-time-empty');
+  const hasData = cliTop && cliTop.some(r => r.top && r.top.length > 0);
+  if (!hasData) {
+    section.classList.add('hidden');
+    if (empty) empty.classList.remove('hidden');
+    if (cliChart) { cliChart.destroy(); cliChart = null; }
+    return;
+  }
+  section.classList.remove('hidden');
+  if (empty) empty.classList.add('hidden');
+  drawCliTopTable(cliTop);
+
+  const ctx = document.getElementById('cli-chart').getContext('2d');
+  if (cliChart) cliChart.destroy();
+
+  // 5 datasets, one per rank (1 = slowest).  Each point carries its command
+  // name on the dataset's `commands` array for the tooltip.
+  const datasets = [0, 1, 2, 3, 4].map(i => {
+    const rank = i + 1;
+    return {
+      label: `#${rank}`,
+      data:     cliTop.map(run => (run.top[i] ? run.top[i].duration_sec : null)),
+      commands: cliTop.map(run => (run.top[i] ? run.top[i].command      : null)),
+      tests:    cliTop.map(run => (run.top[i] ? run.top[i].test_name    : null)),
+      borderColor: CLI_RANK_COLORS[i],
+      backgroundColor: CLI_RANK_COLORS[i] + '20',
+      fill: false,
+      tension: 0.3,
+      pointRadius: 3,
+      spanGaps: true,
+    };
+  });
+
+  cliChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: cliTop.map(r => `#${r.report_number}`),
+      datasets,
+    },
+    options: {
+      ...CHART_OPTS,
+      plugins: {
+        legend: { display: true, labels: { color: '#94a3b8', boxWidth: 12 } },
+        tooltip: {
+          callbacks: {
+            label: (item) => {
+              const ds  = item.dataset;
+              const cmd = ds.commands[item.dataIndex] || '';
+              const v   = item.parsed.y;
+              return `${ds.label}: ${v == null ? '—' : v.toFixed(2) + 's'}  ${cmd}`;
+            },
+            afterLabel: (item) => {
+              const t = item.dataset.tests[item.dataIndex];
+              return t ? `    in: ${t.split('::').pop()}` : '';
+            },
+          },
+        },
+      },
+      scales: {
+        x: { ticks: { maxTicksLimit: 12, maxRotation: 0 }, grid: { color: '#1e293b' } },
+        y: { grid: { color: '#1e293b' }, ticks: { callback: v => `${v}s` } },
+      },
+    },
+  });
+}
+
+function drawCliTopTable(cliTop) {
+  const tbody = document.getElementById('cli-top-table-body');
+  if (!tbody) return;
+
+  const runsByNum = {};
+  (_detailRuns || []).forEach(r => { runsByNum[r.report_number] = r; });
+
+  const pid     = _detailProjectId;
+  const baseUrl = (config && config.allure_base_url) || '';
+
+  const sorted = [...cliTop].sort((a, b) => b.report_number - a.report_number);
+
+  const rows = [];
+  sorted.forEach((run, idx) => {
+    if (!run.top || run.top.length === 0) return;
+    const runBg   = idx % 2 === 0 ? 'bg-slate-800/30' : '';
+    const date    = fmtDate(run.start_ms || (runsByNum[run.report_number] && runsByNum[run.report_number].start_ms));
+    const statusC = run.test_status === 'passed' ? 'text-green-400'
+                   : run.test_status === 'failed' ? 'text-red-400'
+                   : 'text-slate-400';
+    run.top.forEach((item, i) => {
+      const first    = i === 0;
+      const test     = item.test_name ? item.test_name.split('::').pop() : '';
+      const testFull = item.test_name || '';
+
+      let testCell;
+      if (item.test_uid && pid && baseUrl) {
+        const url = `${baseUrl}/projects/${pid}/reports/${run.report_number}/index.html#testresult/${item.test_uid}`;
+        testCell = `<a href="${url}" target="_blank" rel="noopener"
+                      class="text-blue-400 hover:text-blue-300 hover:underline font-mono"
+                      title="${escapeHtml(testFull)}">${escapeHtml(test)} ↗</a>`;
+      } else {
+        testCell = `<span class="text-slate-500 font-mono" title="${escapeHtml(testFull)}">${escapeHtml(test) || '—'}</span>`;
+      }
+
+      let runCell = '';
+      if (first) {
+        if (pid && baseUrl) {
+          const runUrl = `${baseUrl}/projects/${pid}/reports/${run.report_number}/index.html`;
+          runCell = `<a href="${runUrl}" target="_blank" rel="noopener"
+                       class="${statusC} font-semibold hover:underline">#${run.report_number}</a>`;
+        } else {
+          runCell = `<span class="${statusC} font-semibold">#${run.report_number}</span>`;
+        }
+      }
+
+      rows.push(`
+        <tr class="${runBg} ${first ? 'border-t border-slate-800' : ''}">
+          <td class="px-2 py-1 truncate">${runCell}</td>
+          <td class="px-2 py-1 text-slate-500 truncate">${first ? date : ''}</td>
+          <td class="px-2 py-1 text-right text-slate-400">${item.rank}</td>
+          <td class="px-2 py-1 text-right font-mono">${(item.duration_sec || 0).toFixed(2)}s</td>
+          <td class="px-2 py-1 font-mono text-sky-300 truncate" title="${escapeHtml(item.command || '')}">${escapeHtml(item.command || '')}</td>
+          <td class="px-2 py-1 truncate">${testCell}</td>
+        </tr>
+      `);
+    });
+  });
+
+  tbody.innerHTML = rows.join('') || `<tr><td colspan="6" class="px-2 py-4 text-center text-slate-500">No data</td></tr>`;
+}
+
+// ── Runs table ──────────────────────────────────────────────
+function drawRunsTable(runs, projectId, metricsData) {
+  const tbody = document.getElementById('runs-table-body');
+  // Column shows the first configured metric's primary series
+  const primary = (metricsData || [])[0];
+  const primaryKey = primary && primary.primary_key;
+  const primaryUnit = (primary && primary.unit) || '';
+  const th = document.getElementById('runs-metric-th');
+  if (th) th.textContent = primary ? (primary.label || primary.name) : 'Metric';
+  // build a lookup map: report_number → metric run entry
+  const bootMap = {};
+  if (primary) (primary.runs || []).forEach(b => { bootMap[b.report_number] = b; });
+
+  const recent = runs.slice(0, 30);
+  tbody.innerHTML = recent.map((r, i) => {
+    const pct    = effPct(r.passed, r.total, r.skipped);
+    const pctCls = pctTextClass(pct);
+    const rowBg  = i % 2 === 0 ? 'bg-slate-800/30' : '';
+    const url    = `${config.allure_base_url}/projects/${projectId}/reports/${r.report_number}/index.html`;
+    const bt     = bootMap[r.report_number];
+    const btVal  = bt && primaryKey != null ? bt.values[primaryKey] : null;
+    const bootCell = btVal != null
+      ? `<span class="${bt.test_status === 'passed' ? 'text-green-400' : 'text-red-400'}">${btVal.toFixed(1)}${primaryUnit}</span>`
+      : '<span class="text-slate-600">—</span>';
+    return `
+      <tr class="${rowBg} hover:bg-blue-900/20 transition-colors cursor-pointer"
+          onclick="window.open('${url}', '_blank')">
+        <td class="px-2 py-1.5" onclick="event.stopPropagation()">
+          <input type="checkbox" class="run-compare-cb accent-purple-500 cursor-pointer"
+            data-run="${r.report_number}" onchange="_onRunCbChange(this)" />
+        </td>
+        <td class="px-2 py-1.5 text-blue-400 font-mono">${r.report_number}</td>
+        <td class="px-2 py-1.5 text-slate-300">${fmtDate(r.start_ms)}</td>
+        <td class="px-2 py-1.5 text-right text-slate-300">${r.total ?? '—'}</td>
+        <td class="px-2 py-1.5 text-right text-green-400">${r.passed ?? '—'}</td>
+        <td class="px-2 py-1.5 text-right text-red-400">${r.failed || ''}</td>
+        <td class="px-2 py-1.5 text-right text-orange-400">${r.broken || ''}</td>
+        <td class="px-2 py-1.5 text-right text-slate-500">${r.skipped || ''}</td>
+        <td class="px-2 py-1.5 text-right font-semibold ${pctCls}">
+          ${pct !== null ? pct + '%' : '—'}
+        </td>
+        <td class="px-2 py-1.5 text-right text-slate-400">${fmtDuration(r.duration_ms)}</td>
+        <td class="px-2 py-1.5 text-right">${bootCell}</td>
+      </tr>`;
+  }).join('');
+}
+
+// ── Boot ────────────────────────────────────────────────────
+init();
+
+// ── Admin DB browser ─────────────────────────────────────────
+let _adminState = { table: null, offset: 0, limit: 100, total: 0, q: '' };
+let _adminTablesLoaded = false;
+
+async function loadAdminTables() {
+  if (_adminTablesLoaded) return;
+  const r = await fetch('/api/admin/tables');
+  if (!r.ok) return;
+  const tables = await r.json();
+  _adminTablesLoaded = true;
+  const list = document.getElementById('admin-table-list');
+  list.innerHTML = tables.map(t => `
+    <button onclick="adminSelectTable('${t.name}')"
+      id="admin-tbl-${t.name}"
+      class="w-full text-left px-4 py-2 text-xs hover:bg-slate-800 transition-colors flex justify-between items-center group">
+      <span class="text-slate-300 group-hover:text-blue-400 transition-colors">${t.name}</span>
+      <span class="text-slate-600 text-[10px]">${t.rows.toLocaleString()}</span>
+    </button>`).join('');
+}
+
+async function adminSelectTable(name) {
+  // Highlight selected
+  document.querySelectorAll('[id^="admin-tbl-"]').forEach(b => b.classList.remove('bg-slate-800/60'));
+  const btn = document.getElementById(`admin-tbl-${name}`);
+  if (btn) btn.classList.add('bg-slate-800/60');
+
+  _adminState = { table: name, offset: 0, limit: 100, total: 0, q: '' };
+  document.getElementById('admin-search').value = '';
+  await _adminFetch();
+}
+
+let _adminSearchTimer = null;
+function adminSearch() {
+  clearTimeout(_adminSearchTimer);
+  _adminSearchTimer = setTimeout(async () => {
+    if (!_adminState.table) return;
+    _adminState.q = document.getElementById('admin-search').value.trim();
+    _adminState.offset = 0;
+    await _adminFetch();
+  }, 300);
+}
+
+function adminPrev() {
+  if (_adminState.offset === 0) return;
+  _adminState.offset = Math.max(0, _adminState.offset - _adminState.limit);
+  _adminFetch();
+}
+
+function adminNext() {
+  if (_adminState.offset + _adminState.limit >= _adminState.total) return;
+  _adminState.offset += _adminState.limit;
+  _adminFetch();
+}
+
+async function _adminFetch() {
+  const { table, offset, limit, q } = _adminState;
+  if (!table) return;
+  document.getElementById('admin-table-title').textContent = table;
+  document.getElementById('admin-table-content').innerHTML =
+    '<div class="flex items-center justify-center h-32 text-slate-500 text-sm">Loading…</div>';
+
+  const params = new URLSearchParams({ limit, offset });
+  if (q) params.set('q', q);
+  const r = await fetch(`/api/admin/table/${table}?${params}`);
+  if (!r.ok) {
+    document.getElementById('admin-table-content').innerHTML =
+      `<div class="flex items-center justify-center h-32 text-red-400 text-sm">Error ${r.status}</div>`;
+    return;
+  }
+  const data = await r.json();
+  _adminState.total = data.total;
+
+  // Row count + page info
+  document.getElementById('admin-row-count').textContent =
+    `${data.total.toLocaleString()} row${data.total !== 1 ? 's' : ''}`;
+  const pageStart = data.offset + 1;
+  const pageEnd   = Math.min(data.offset + data.limit, data.total);
+  document.getElementById('admin-page-info').textContent =
+    data.total > data.limit ? `${pageStart}–${pageEnd} of ${data.total.toLocaleString()}` : '';
+  document.getElementById('admin-prev').disabled = data.offset === 0;
+  document.getElementById('admin-next').disabled = pageEnd >= data.total;
+
+  // Render table
+  if (!data.rows.length) {
+    document.getElementById('admin-table-content').innerHTML =
+      '<div class="flex items-center justify-center h-32 text-slate-500 text-sm">No rows</div>';
+    return;
+  }
+
+  const thCls = 'px-3 py-2 text-left text-[10px] font-semibold text-slate-400 uppercase tracking-wider whitespace-nowrap sticky top-0 bg-slate-900 border-b border-slate-700';
+  const tdCls = 'px-3 py-1.5 text-[11px] text-slate-300 whitespace-nowrap max-w-xs truncate border-b border-slate-800/50 align-top';
+
+  const headers = data.columns.map(c => `<th class="${thCls}">${c}</th>`).join('');
+  const rowsHtml = data.rows.map((row, ri) => {
+    const cells = row.map(v => {
+      const display = v === null ? '<span class="text-slate-600 italic">null</span>'
+                    : String(v).length > 120 ? `<span title="${escHtml(String(v))}">${escHtml(String(v).slice(0, 120))}…</span>`
+                    : escHtml(String(v));
+      return `<td class="${tdCls}">${display}</td>`;
+    }).join('');
+    const bg = ri % 2 === 0 ? '' : 'bg-slate-900/30';
+    return `<tr class="${bg} hover:bg-slate-800/40 transition-colors">${cells}</tr>`;
+  }).join('');
+
+  document.getElementById('admin-table-content').innerHTML = `
+    <table class="w-full border-collapse text-left">
+      <thead><tr>${headers}</tr></thead>
+      <tbody>${rowsHtml}</tbody>
+    </table>`;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function adminClearTable() {
+  const table = _adminState.table;
+  if (!table) return;
+  document.getElementById('admin-clear-title').textContent = `Clear "${table}"?`;
+  document.getElementById('admin-clear-body').textContent =
+    `This will permanently delete all rows from the "${table}" table. This cannot be undone.`;
+  document.getElementById('admin-clear-confirm-btn').onclick = async () => {
+    closeAdminClearModal();
+    await _adminDoClear([table]);
+  };
+  document.getElementById('admin-clear-modal').classList.remove('hidden');
+}
+
+function adminClearAll() {
+  document.getElementById('admin-clear-title').textContent = 'Clear entire database?';
+  document.getElementById('admin-clear-body').textContent =
+    'This will permanently delete ALL rows from every table. This cannot be undone.';
+  document.getElementById('admin-clear-confirm-btn').onclick = async () => {
+    closeAdminClearModal();
+    await _adminDoClear(null);
+  };
+  document.getElementById('admin-clear-modal').classList.remove('hidden');
+}
+
+function closeAdminClearModal() {
+  document.getElementById('admin-clear-modal').classList.add('hidden');
+}
+
+async function _adminDoClear(tables) {
+  const body = tables ? { tables } : {};
+  const r = await fetch('/api/admin/clear', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!r.ok) {
+    alert(`Error clearing: ${r.status}`);
+    return;
+  }
+  // Reload table list counts and refresh current view
+  _adminTablesLoaded = false;
+  await loadAdminTables();
+  if (_adminState.table) {
+    _adminState.offset = 0;
+    await _adminFetch();
+  }
+}
+
+// ── Scraper Summary ───────────────────────────────────────────
+async function loadScraperSummary() {
+  const el = document.getElementById('scraper-content');
+  el.innerHTML = '<div class="text-xs text-slate-500">Loading…</div>';
+
+  const r = await fetch('/api/scraper/summary');
+  if (!r.ok) { el.innerHTML = '<div class="text-red-400 text-xs">Failed to load</div>'; return; }
+  const projects = await r.json();
+
+  if (!projects.length) {
+    el.innerHTML = '<div class="text-slate-500 text-xs">No data yet.</div>';
+    return;
+  }
+
+  let html = '';
+  for (const proj of projects) {
+    const missing = proj.runs.filter(r => r.stored === 0).length;
+    html += `
+      <div class="mb-6">
+        <div class="flex items-baseline gap-3 mb-2">
+          <span class="text-xs font-semibold text-slate-200">${escHtml(proj.id)}</span>
+          <span class="text-[10px] text-slate-500">${proj.total_runs} runs &nbsp;·&nbsp; ${proj.total_stored.toLocaleString()} unique test names stored</span>
+          ${missing ? `<span class="text-[10px] text-yellow-400">${missing} run(s) not yet scraped</span>` : ''}
+        </div>
+        <div class="overflow-x-auto">
+        <table class="w-full text-xs border-collapse">
+          <thead>
+            <tr class="text-left text-[10px] text-slate-500 border-b border-slate-800">
+              <th class="py-1 pr-4 font-medium">Run #</th>
+              <th class="py-1 pr-4 font-medium">Date</th>
+              <th class="py-1 pr-4 font-medium text-right">Allure total</th>
+              <th class="py-1 pr-4 font-medium text-right">Unique stored</th>
+              <th class="py-1 font-medium">Status</th>
+            </tr>
+          </thead>
+          <tbody>`;
+    // Show rows newest first
+    for (const run of [...proj.runs].reverse()) {
+      const date = run.start_ms ? new Date(run.start_ms).toLocaleDateString() : '—';
+      const storedColor = run.stored > 0 ? 'text-slate-300' : 'text-slate-500';
+      const badge = run.stored === 0
+        ? '<span class="text-yellow-400">not scraped</span>'
+        : '<span class="text-green-400">ok</span>';
+      html += `
+            <tr class="border-b border-slate-800/50 hover:bg-slate-800/30">
+              <td class="py-1 pr-4 text-slate-400">${run.run}</td>
+              <td class="py-1 pr-4 text-slate-500">${date}</td>
+              <td class="py-1 pr-4 text-right text-slate-400">${run.total.toLocaleString()}</td>
+              <td class="py-1 pr-4 text-right ${storedColor}">${run.stored.toLocaleString()}</td>
+              <td class="py-1">${badge}</td>
+            </tr>`;
+    }
+    html += `
+          </tbody>
+        </table>
+        </div>
+      </div>`;
+  }
+  el.innerHTML = html;
+}
+
+// ── Report viewer ────────────────────────────────────────────
+
+let _reportBlobUrl = null;
+
+function showReportViewer(url) {
+  if (_reportBlobUrl) URL.revokeObjectURL(_reportBlobUrl);
+  _reportBlobUrl = url;
+  document.getElementById('report-iframe').src = url;
+  document.getElementById('report-viewer').classList.remove('hidden');
+}
+
+function closeReportViewer() {
+  document.getElementById('report-viewer').classList.add('hidden');
+  document.getElementById('report-iframe').src = '';
+  if (_reportBlobUrl) { URL.revokeObjectURL(_reportBlobUrl); _reportBlobUrl = null; }
+}
+
+// ── Run comparison ───────────────────────────────────────────
+
+function _onRunCbChange(cb) {
+  const num = parseInt(cb.dataset.run);
+  if (cb.checked) {
+    _detailSelectedRuns.push(num);
+    if (_detailSelectedRuns.length > 2) {
+      const evicted = _detailSelectedRuns.shift();
+      const old = document.querySelector(`.run-compare-cb[data-run="${evicted}"]`);
+      if (old) old.checked = false;
+    }
+  } else {
+    _detailSelectedRuns = _detailSelectedRuns.filter(n => n !== num);
+  }
+  _updateCompareBtn();
+}
+
+function _updateCompareBtn() {
+  const btn = document.getElementById('compare-runs-btn');
+  if (!btn) return;
+  if (_detailSelectedRuns.length === 2) {
+    const [a, b] = [..._detailSelectedRuns].sort((x, y) => x - y);
+    btn.textContent = `📊 Compare #${a} → #${b}`;
+    btn.classList.remove('hidden');
+  } else {
+    btn.classList.add('hidden');
+  }
+}
+
+async function doCompareRuns() {
+  if (_detailSelectedRuns.length !== 2) return;
+  const [runA, runB] = [..._detailSelectedRuns].sort((x, y) => x - y);
+  const btn = document.getElementById('compare-runs-btn');
+  const origText = btn.textContent;
+  btn.textContent  = 'Generating…';
+  btn.disabled     = true;
+  try {
+    const resp = await fetch('/api/report/compare', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ project_id: _detailProjectId, run_a: runA, run_b: runB }),
+    });
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      alert('Error: ' + (err.detail || resp.statusText));
+      return;
+    }
+    const blob = await resp.blob();
+    showReportViewer(URL.createObjectURL(blob));
+  } catch (e) {
+    alert('Error: ' + e.message);
+  } finally {
+    btn.textContent = origText;
+    btn.disabled    = false;
+  }
+}
+
+// ── Report generation ────────────────────────────────────────
+
+// Filled by openReportModal() with the currently visible projects
+let _reportProjects = [];
+
+function _runOptionLabel(r) {
+  const date = r.start_ms ? new Date(r.start_ms).toLocaleDateString() : '';
+  return r.build_version
+    ? `${r.build_version}${date ? '  ·  ' + date : ''}`
+    : `Run #${r.report_number}${date ? '  ·  ' + date : ''}`;
+}
+
+async function _populateRunSelect(pid, idx, latestRun) {
+  const sel = document.querySelector(`.report-run-sel[data-idx="${idx}"]`);
+  if (!sel) return;
+  try {
+    const runs = await fetch(`/api/projects/${encodeURIComponent(pid)}/runs?limit=60`).then(r => r.json());
+    // API returns newest first
+    sel.innerHTML = runs.map(r =>
+      `<option value="${r.report_number}"${r.report_number === latestRun ? ' selected' : ''}>${_runOptionLabel(r)}</option>`
+    ).join('');
+  } catch {
+    sel.innerHTML = `<option value="${latestRun}">Run #${latestRun}</option>`;
+  }
+}
+
+async function openReportModal() {
+  // Use only projects currently visible on the dashboard (respects filters)
+  const visible = filteredProjects();
+  _reportProjects = visible;
+
+  const list = document.getElementById('report-project-list');
+  if (!visible.length) {
+    list.innerHTML = '<p class="text-xs text-slate-500">No projects loaded yet. Refresh the dashboard first.</p>';
+  } else {
+    list.innerHTML = visible.map((p, i) => {
+      const latest = p.latest_run;
+      const placeholder = _runOptionLabel({ ...latest, report_number: latest.report_number });
+      return `
+      <label class="flex items-center gap-3 bg-slate-800 hover:bg-slate-750 rounded px-3 py-2 cursor-pointer select-none">
+        <input type="checkbox" class="report-proj-cb accent-green-500" data-idx="${i}" checked />
+        <span class="flex-1 text-xs text-slate-200 truncate"
+              title="${p.id}">${p.variant_label} · ${p.cadence_label} · ${p.platform_label}</span>
+        <select class="report-run-sel bg-slate-700 border border-slate-600
+                rounded px-2 py-0.5 text-xs text-slate-200 focus:outline-none focus:border-blue-500 max-w-[14rem]"
+                data-idx="${i}">
+          <option value="${latest.report_number}">${placeholder}</option>
+        </select>
+      </label>`;
+    }).join('');
+
+    // Populate all selects in parallel
+    visible.forEach((p, i) => _populateRunSelect(p.id, i, p.latest_run.report_number));
+  }
+
+  document.getElementById('report-version').value = '';
+  document.getElementById('report-status').textContent = '';
+  document.getElementById('report-modal').classList.remove('hidden');
+}
+
+function closeReportModal() {
+  document.getElementById('report-modal').classList.add('hidden');
+}
+
+function reportSelectAll(checked) {
+  document.querySelectorAll('.report-proj-cb').forEach(cb => cb.checked = checked);
+}
+
+async function doGenerateReport() {
+  const selected = [];
+  document.querySelectorAll('.report-proj-cb:checked').forEach(cb => {
+    const idx = parseInt(cb.dataset.idx);
+    const p   = _reportProjects[idx];
+    const sel = document.querySelector(`.report-run-sel[data-idx="${idx}"]`);
+    const run = parseInt(sel ? sel.value : p.latest_run.report_number);
+    selected.push({ project_id: p.id, report_number: run });
+  });
+
+  if (!selected.length) {
+    document.getElementById('report-status').textContent = 'Select at least one project.';
+    return;
+  }
+
+  const version = document.getElementById('report-version').value.trim();
+  const statusEl = document.getElementById('report-status');
+  statusEl.textContent = 'Generating…';
+
+  try {
+    const resp = await fetch('/api/report/generate', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ reports: selected, version }),
+    });
+
+    if (!resp.ok) {
+      const err = await resp.json().catch(() => ({ detail: resp.statusText }));
+      statusEl.textContent = 'Error: ' + (err.detail || resp.statusText);
+      return;
+    }
+
+    // Show report in the inline viewer
+    const blob = await resp.blob();
+    const url  = URL.createObjectURL(blob);
+    closeReportModal();
+    showReportViewer(url);
+  } catch (e) {
+    statusEl.textContent = 'Error: ' + e.message;
+  }
+}
+
+// ── Configuration editor (admin) ─────────────────────────────
+let _cfg = { dimensions: [], patterns: [], labels: {}, project_map: {}, report: {} };
+let _cfgLabelRows = [];          // aligned to _cfg.dimensions: [[{value,label},…], …]
+let _cfgProjects = [];           // [{pid, auto: {pattern, dimensions} | null}]
+let _cfgProjFilter = '';
+let _cfgVersion = null;
+let _cfgTestTimer = null;
+
+const _CFG_SONIC_PRESET = {
+  dimensions: [
+    { key: 'variant',  label: 'Variant',  sort_order: 0 },
+    { key: 'cadence',  label: 'Cadence',  sort_order: 1 },
+    { key: 'platform', label: 'Platform', sort_order: 2 },
+  ],
+  patterns: [
+    { name: 'regression',
+      regex: '^regression-(sl|sx)-(ols-daily|ols-weekly|daily|weekly|release|healthcheck)-str-(.+)-t0$',
+      group_map: { '1': 'variant', '2': 'cadence', '3': 'platform' },
+      constants: {}, transforms: { variant: 'upper' }, sort_order: 0 },
+    { name: 'debug', regex: '^debug-str-(.+)-t0$',
+      group_map: { '1': 'platform' }, constants: { variant: 'debug', cadence: 'debug' },
+      transforms: {}, sort_order: 1 },
+  ],
+  labels: {
+    cadence: { daily:'Daily', weekly:'Weekly', release:'Release', healthcheck:'Healthcheck',
+               'ols-daily':'OLS Daily', 'ols-weekly':'OLS Weekly', debug:'Debug', other:'Other' },
+    variant: { SL:'Sonic Lite', SX:'Sonic X', debug:'Debug', other:'Other' },
+    platform: { 'accton-ecs4650':'Accton ECS4650', 'accton-ecs5550-54x':'Accton ECS5550-54X',
+                'cls-es1500-48':'CLS ES1500-48', 'ufispace-s6301-56stp':'UFiSpace S6301-56STP',
+                'wistron-es2227':'Wistron ES2227' },
+  },
+};
+
+function _cfgEsc(s) {
+  return String(s == null ? '' : s)
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function _cfgStatus(msg, kind) {
+  const el = document.getElementById('cfg-status');
+  el.textContent = msg || '';
+  el.className = 'text-xs ' + (kind === 'error' ? 'text-red-400'
+                 : kind === 'ok' ? 'text-emerald-400' : 'text-slate-500');
+}
+function _cfgBuildLabelRows() {
+  _cfgLabelRows = _cfg.dimensions.map(d => {
+    const m = _cfg.labels[d.key] || {};
+    return Object.keys(m).map(v => ({ value: v, label: m[v] }));
+  });
+}
+
+async function loadConfigEditor() {
+  _cfgStatus('Loading…');
+  try {
+    const r = await fetch('/api/admin/config');
+    if (!r.ok) { _cfgStatus('Load failed: ' + r.status, 'error'); return; }
+    const doc = await r.json();
+    _cfg = { dimensions: doc.dimensions || [], patterns: doc.patterns || [],
+             labels: doc.labels || {}, project_map: doc.project_map || {},
+             views: doc.views || [], automap: doc.automap || {}, metrics: doc.metrics || [],
+             report: doc.report || {} };
+    _cfgBuildAutomapRows();
+    _cfgVersion = doc.version;
+    document.getElementById('cfg-version').textContent = 'v' + doc.version;
+    _cfgBuildLabelRows();
+    cfgRenderAll();
+    cfgResolveProjects();
+    _cfgStatus('');
+  } catch (e) { _cfgStatus('Load error: ' + e.message, 'error'); }
+}
+
+function cfgRenderAll() { cfgRenderDimensions(); cfgRenderPatterns(); cfgRenderLabels(); cfgRenderViews(); cfgRenderAutomap(); cfgRenderMetrics(); cfgRenderReport(); }
+
+// Fixed key set from the server (defaults merged in). Strings get a text
+// input; lists/maps get a JSON input.
+function cfgRenderReport() {
+  const c = document.getElementById('cfg-report');
+  if (!c) return;
+  c.innerHTML = '';
+  Object.entries(_cfg.report || {}).forEach(([key, value]) => {
+    const isString = typeof value === 'string';
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2';
+    row.innerHTML =
+      `<span class="text-[11px] text-slate-500 font-mono w-44 shrink-0 text-right">${_cfgEsc(key)}</span>` +
+      (isString
+        ? `<input value="${_cfgEsc(value)}"
+             class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 focus:outline-none focus:border-blue-500"
+             onchange="_cfg.report['${_cfgEsc(key)}']=this.value"/>`
+        : `<input value='${_cfgEsc(JSON.stringify(value))}'
+             class="flex-1 bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[11px] text-slate-300 font-mono focus:outline-none focus:border-blue-500"
+             oninput="cfgEditReportJson('${_cfgEsc(key)}',this)"/>`);
+    c.appendChild(row);
+  });
+}
+function cfgEditReportJson(key, el) {
+  try {
+    _cfg.report[key] = JSON.parse(el.value);
+    el.classList.remove('border-red-500'); el.classList.add('border-slate-700');
+  } catch (_) { el.classList.add('border-red-500'); el.classList.remove('border-slate-700'); }
+}
+
+function cfgRenderMetrics() {
+  const c = document.getElementById('cfg-metrics');
+  if (!c) return;
+  c.innerHTML = '';
+  (_cfg.metrics || []).forEach((m, i) => {
+    const card = document.createElement('div');
+    card.className = 'border border-slate-800 rounded p-3 space-y-2 bg-slate-900/40';
+    card.innerHTML =
+      `<div class="flex items-center gap-2">
+        <input value="${_cfgEsc(m.name)}" placeholder="metric name"
+          class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 w-40 focus:outline-none focus:border-blue-500"
+          onchange="_cfg.metrics[${i}].name=this.value"/>
+        <input value="${_cfgEsc(m.attachment_name || '')}" placeholder="attachment name"
+          class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 w-40 focus:outline-none focus:border-blue-500"
+          onchange="_cfg.metrics[${i}].attachment_name=this.value"/>
+        <input value="${_cfgEsc(m.label || '')}" placeholder="display label"
+          class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 w-32 focus:outline-none focus:border-blue-500"
+          onchange="_cfg.metrics[${i}].label=this.value"/>
+        <input value="${_cfgEsc(m.unit || '')}" placeholder="unit"
+          class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 w-14 focus:outline-none focus:border-blue-500"
+          onchange="_cfg.metrics[${i}].unit=this.value"/>
+        <div class="flex-1"></div>
+        <button onclick="_cfg.metrics.splice(${i},1); cfgRenderMetrics()" class="text-red-500 hover:text-red-400 text-xs">✕ remove</button>
+      </div>
+      <input value='${_cfgEsc(JSON.stringify(m.test_names || []))}' placeholder='test names ["test_a","test_b"]'
+        class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[11px] text-slate-300 font-mono focus:outline-none focus:border-blue-500"
+        oninput="cfgEditMetricJson(${i},'test_names',this)"/>
+      <input value='${_cfgEsc(JSON.stringify(m.value_keys || {}))}' placeholder='value keys {"series_key":["attachment_key"]}'
+        class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[11px] text-slate-300 font-mono focus:outline-none focus:border-blue-500"
+        oninput="cfgEditMetricJson(${i},'value_keys',this)"/>`;
+    c.appendChild(card);
+  });
+}
+function cfgEditMetricJson(i, key, el) {
+  try {
+    _cfg.metrics[i][key] = el.value.trim() === '' ? (key === 'test_names' ? [] : {}) : JSON.parse(el.value);
+    el.classList.remove('border-red-500'); el.classList.add('border-slate-700');
+  } catch (_) { el.classList.add('border-red-500'); el.classList.remove('border-slate-700'); }
+}
+function cfgAddMetric() {
+  (_cfg.metrics || (_cfg.metrics = [])).push({ name: '', attachment_name: '', test_names: [], value_keys: {}, label: '', unit: '' });
+  cfgRenderMetrics();
+}
+
+let _cfgAutomapRows = [];   // [{suite, feature}]
+function _cfgBuildAutomapRows() {
+  _cfgAutomapRows = Object.entries(_cfg.automap || {}).map(([suite, feature]) => ({ suite, feature }));
+}
+function cfgRenderAutomap() {
+  const c = document.getElementById('cfg-automap');
+  if (!c) return;
+  c.innerHTML = '';
+  _cfgAutomapRows.forEach((row, i) => {
+    const div = document.createElement('div');
+    div.className = 'flex items-center gap-2';
+    div.innerHTML =
+      `<input value="${_cfgEsc(row.suite)}" placeholder="suite name"
+        class="bg-slate-800 border border-slate-700 rounded px-2 py-0.5 text-[11px] text-slate-300 font-mono w-56 focus:outline-none focus:border-blue-500"
+        onchange="_cfgAutomapRows[${i}].suite=this.value"/>
+      <span class="text-slate-600">→</span>
+      <input value="${_cfgEsc(row.feature)}" placeholder="feature name"
+        class="bg-slate-800 border border-slate-700 rounded px-2 py-0.5 text-[11px] text-slate-300 w-48 focus:outline-none focus:border-blue-500"
+        onchange="_cfgAutomapRows[${i}].feature=this.value"/>
+      <button onclick="_cfgAutomapRows.splice(${i},1); cfgRenderAutomap()" class="text-red-500 hover:text-red-400 text-[11px]">✕</button>`;
+    c.appendChild(div);
+  });
+}
+function cfgAddAutomap() { _cfgAutomapRows.push({ suite: '', feature: '' }); cfgRenderAutomap(); }
+
+function cfgRenderViews() {
+  const c = document.getElementById('cfg-views');
+  if (!c) return;
+  c.innerHTML = '';
+  (_cfg.views || []).forEach((v, i) => {
+    const row = document.createElement('div');
+    row.className = 'border border-slate-800 rounded p-3 space-y-2 bg-slate-900/40';
+    row.innerHTML =
+      `<div class="flex items-center gap-2">
+        <input value="${_cfgEsc(v.name)}" placeholder="view name"
+          class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 w-44 focus:outline-none focus:border-blue-500"
+          onchange="_cfg.views[${i}].name=this.value"/>
+        <input value="${_cfgEsc(v.scope || 'standard')}" placeholder="feature scope"
+          class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 w-32 focus:outline-none focus:border-blue-500"
+          onchange="_cfg.views[${i}].scope=this.value"/>
+        <input type="number" value="${v.sort_order ?? i}" title="sort order"
+          class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 w-16 focus:outline-none focus:border-blue-500"
+          onchange="_cfg.views[${i}].sort_order=parseInt(this.value)||0"/>
+        <div class="flex-1"></div>
+        <button onclick="_cfg.views.splice(${i},1); cfgRenderViews()" class="text-red-500 hover:text-red-400 text-xs">✕ remove</button>
+      </div>
+      <input value='${_cfgEsc(JSON.stringify(v.filter || {}))}'
+        placeholder='column filter, e.g. {"rules":[{"dim":"cadence","op":"in","values":["ols-daily"]}]}'
+        class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[11px] text-slate-300 font-mono focus:outline-none focus:border-blue-500"
+        oninput="cfgEditViewFilter(${i}, this)"/>`;
+    c.appendChild(row);
+  });
+}
+
+function cfgEditViewFilter(i, el) {
+  try {
+    const v = el.value.trim() === '' ? {} : JSON.parse(el.value);
+    _cfg.views[i].filter = v;
+    el.classList.remove('border-red-500'); el.classList.add('border-slate-700');
+  } catch (_) {
+    el.classList.add('border-red-500'); el.classList.remove('border-slate-700');
+  }
+}
+
+function cfgAddView() {
+  (_cfg.views || (_cfg.views = [])).push({ name: '', scope: 'standard', filter: { rules: [] }, sort_order: _cfg.views.length });
+  cfgRenderViews();
+}
+
+function cfgRenderDimensions() {
+  const c = document.getElementById('cfg-dimensions');
+  c.innerHTML = '';
+  _cfg.dimensions.forEach((d, i) => {
+    const row = document.createElement('div');
+    row.className = 'flex items-center gap-2';
+    row.innerHTML =
+      `<input value="${_cfgEsc(d.key)}" placeholder="key"
+        class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 w-40 focus:outline-none focus:border-blue-500"
+        onchange="_cfg.dimensions[${i}].key=this.value; cfgRenderLabels(); cfgScheduleTest()"/>
+      <input value="${_cfgEsc(d.label)}" placeholder="label"
+        class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 w-40 focus:outline-none focus:border-blue-500"
+        onchange="_cfg.dimensions[${i}].label=this.value; cfgRenderLabels()"/>
+      <input type="number" value="${d.sort_order ?? i}" title="sort order"
+        class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 w-16 focus:outline-none focus:border-blue-500"
+        onchange="_cfg.dimensions[${i}].sort_order=parseInt(this.value)||0"/>
+      <label class="flex items-center gap-1 text-[11px] text-slate-400" title="Use this dimension as the card title">
+        <input type="radio" name="cfg-title-dim" ${d.role === 'title' ? 'checked' : ''}
+          onchange="cfgSetTitleDim(${i})" class="accent-blue-500"/> title</label>
+      <button onclick="_cfg.dimensions.splice(${i},1); _cfgLabelRows.splice(${i},1); cfgRenderDimensions(); cfgRenderLabels(); cfgScheduleTest()"
+        class="text-red-500 hover:text-red-400 text-xs">✕</button>`;
+    c.appendChild(row);
+  });
+}
+
+function cfgSetTitleDim(i) {
+  _cfg.dimensions.forEach((d, j) => { d.role = (j === i) ? 'title' : ''; });
+}
+
+function cfgRenderPatterns() {
+  const c = document.getElementById('cfg-patterns');
+  c.innerHTML = '';
+  _cfg.patterns.forEach((p, i) => {
+    const card = document.createElement('div');
+    card.className = 'border border-slate-800 rounded p-3 space-y-2 bg-slate-900/40';
+    card.innerHTML =
+      `<div class="flex items-center gap-2">
+        <input value="${_cfgEsc(p.name)}" placeholder="name"
+          class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 w-40 focus:outline-none focus:border-blue-500"
+          onchange="_cfg.patterns[${i}].name=this.value"/>
+        <input type="number" value="${p.sort_order ?? i}" title="sort order"
+          class="bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 w-16 focus:outline-none focus:border-blue-500"
+          onchange="_cfg.patterns[${i}].sort_order=parseInt(this.value)||0; cfgScheduleTest()"/>
+        <div class="flex-1"></div>
+        <button onclick="_cfg.patterns.splice(${i},1); cfgRenderPatterns(); cfgScheduleTest()"
+          class="text-red-500 hover:text-red-400 text-xs">✕ remove</button>
+      </div>
+      <input value="${_cfgEsc(p.regex)}" placeholder="regex"
+        class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-xs text-emerald-300 font-mono focus:outline-none focus:border-blue-500"
+        oninput="_cfg.patterns[${i}].regex=this.value; cfgScheduleTest()"/>
+      <div class="grid grid-cols-3 gap-2">
+        ${_cfgJsonField(i,'group_map','group_map  {&quot;1&quot;:&quot;dim&quot;}')}
+        ${_cfgJsonField(i,'constants','constants  {&quot;dim&quot;:&quot;val&quot;}')}
+        ${_cfgJsonField(i,'transforms','transforms  {&quot;dim&quot;:&quot;upper&quot;}')}
+      </div>`;
+    c.appendChild(card);
+  });
+}
+
+function _cfgJsonField(i, key, placeholder) {
+  const val = _cfgEsc(JSON.stringify(_cfg.patterns[i][key] || {}));
+  return `<input value="${val}" placeholder="${placeholder}"
+      class="w-full bg-slate-800 border border-slate-700 rounded px-2 py-1 text-[11px] text-slate-300 font-mono focus:outline-none focus:border-blue-500"
+      oninput="cfgEditJson(${i},'${key}',this)"/>`;
+}
+
+function cfgEditJson(i, key, el) {
+  try {
+    const v = el.value.trim() === '' ? {} : JSON.parse(el.value);
+    if (typeof v !== 'object' || Array.isArray(v)) throw new Error('must be an object');
+    _cfg.patterns[i][key] = v;
+    el.classList.remove('border-red-500'); el.classList.add('border-slate-700');
+    cfgScheduleTest();
+  } catch (_) {
+    el.classList.add('border-red-500'); el.classList.remove('border-slate-700');
+  }
+}
+
+function cfgRenderLabels() {
+  const c = document.getElementById('cfg-labels');
+  c.innerHTML = '';
+  if (_cfgLabelRows.length !== _cfg.dimensions.length) _cfgBuildLabelRows();
+  _cfg.dimensions.forEach((d, di) => {
+    const rows = _cfgLabelRows[di] || (_cfgLabelRows[di] = []);
+    const box = document.createElement('div');
+    box.className = 'border border-slate-800 rounded p-2 bg-slate-900/40';
+    let html = '';
+    rows.forEach((row, ri) => {
+      html +=
+        `<div class="flex items-center gap-2">
+          <input value="${_cfgEsc(row.value)}" placeholder="value"
+            class="bg-slate-800 border border-slate-700 rounded px-2 py-0.5 text-[11px] text-slate-300 w-44 focus:outline-none focus:border-blue-500"
+            onchange="_cfgLabelRows[${di}][${ri}].value=this.value; cfgScheduleTest()"/>
+          <span class="text-slate-600">→</span>
+          <input value="${_cfgEsc(row.label)}" placeholder="label"
+            class="bg-slate-800 border border-slate-700 rounded px-2 py-0.5 text-[11px] text-slate-300 w-44 focus:outline-none focus:border-blue-500"
+            onchange="_cfgLabelRows[${di}][${ri}].label=this.value"/>
+          <button onclick="_cfgLabelRows[${di}].splice(${ri},1); cfgRenderLabels()"
+            class="text-red-500 hover:text-red-400 text-[11px]">✕</button>
+        </div>`;
+    });
+    box.innerHTML =
+      `<div class="flex items-center gap-2 mb-1.5">
+        <span class="text-[11px] font-semibold text-slate-300">${_cfgEsc(d.label || d.key)}</span>
+        <span class="text-[10px] text-slate-600">${_cfgEsc(d.key)}</span>
+        <button onclick="_cfgLabelRows[${di}].push({value:'',label:''}); cfgRenderLabels()"
+          class="text-[11px] text-blue-400 hover:text-blue-300">+ add</button>
+      </div>
+      <div class="space-y-1">${html || '<div class="text-[10px] text-slate-600">no labels</div>'}</div>`;
+    c.appendChild(box);
+  });
+}
+
+function cfgAddDimension() {
+  _cfg.dimensions.push({ key:'', label:'', sort_order:_cfg.dimensions.length });
+  _cfgLabelRows.push([]);
+  cfgRenderDimensions(); cfgRenderLabels();
+}
+function cfgAddPattern() {
+  _cfg.patterns.push({ name:'', regex:'', group_map:{}, constants:{}, transforms:{}, sort_order:_cfg.patterns.length });
+  cfgRenderPatterns();
+}
+
+function _cfgCollect() {
+  const labels = {};
+  _cfg.dimensions.forEach((d, di) => {
+    const key = (d.key || '').trim();
+    if (!key) return;
+    const m = {};
+    (_cfgLabelRows[di] || []).forEach(r => { if ((r.value || '').trim() !== '') m[r.value] = r.label; });
+    if (Object.keys(m).length) labels[key] = m;
+  });
+  return {
+    dimensions: _cfg.dimensions.map((d, i) => ({ key:(d.key||'').trim(), label:d.label||'', sort_order: d.sort_order ?? i, role: d.role || '' })),
+    patterns: _cfg.patterns.map((p, i) => ({
+      name:(p.name||'').trim(), regex:p.regex||'',
+      group_map:p.group_map||{}, constants:p.constants||{}, transforms:p.transforms||{},
+      sort_order: p.sort_order ?? i,
+    })),
+    labels,
+    project_map: _cfg.project_map || {},
+    views: (_cfg.views || []).map((v, i) => ({
+      name: (v.name || '').trim(), scope: (v.scope || 'standard').trim(),
+      filter: v.filter || {}, sort_order: v.sort_order ?? i,
+    })),
+    automap: Object.fromEntries(
+      _cfgAutomapRows.filter(r => (r.suite || '').trim() && (r.feature || '').trim())
+        .map(r => [r.suite.trim(), r.feature.trim()])),
+    metrics: (_cfg.metrics || []).map((m, i) => ({
+      name: (m.name || '').trim(), attachment_name: (m.attachment_name || '').trim(),
+      test_names: m.test_names || [], value_keys: m.value_keys || {},
+      label: (m.label || '').trim(), unit: (m.unit || '').trim(), sort_order: i,
+    })),
+    report: _cfg.report || {},
+  };
+}
+
+async function cfgSave() {
+  const doc = _cfgCollect();
+  _cfgStatus('Saving…');
+  try {
+    const r = await fetch('/api/admin/config', {
+      method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify(doc),
+    });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) { _cfgStatus('Save failed: ' + (data.detail || r.status), 'error'); return; }
+    _cfgVersion = data.version;
+    document.getElementById('cfg-version').textContent = 'v' + data.version;
+    _cfgStatus('Saved (v' + data.version + ')', 'ok');
+    // Views/labels may have changed — refresh the client config and matrix tabs.
+    config = await fetch('/api/config').then(r => r.json());
+    buildViewTabs();
+    invalidateMatrix();
+  } catch (e) { _cfgStatus('Save error: ' + e.message, 'error'); }
+}
+
+// Re-resolve auto (pattern) classification when dimensions/patterns/labels change.
+function cfgScheduleTest() { clearTimeout(_cfgTestTimer); _cfgTestTimer = setTimeout(cfgResolveProjects, 350); }
+
+function cfgToggleAdvanced() {
+  const adv = document.getElementById('cfg-advanced');
+  const btn = document.getElementById('cfg-adv-toggle');
+  const open = adv.classList.toggle('hidden') === false;
+  btn.textContent = (open ? '▾' : '▸') + ' Advanced — dimensions, patterns & labels';
+}
+
+// Fetch how the current patterns classify the real project IDs (the "auto" layer).
+async function cfgResolveProjects() {
+  try {
+    const r = await fetch('/api/admin/config/test-pattern', {
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({ patterns: _cfgCollect().patterns }),
+    });
+    if (!r.ok) { document.getElementById('cfg-projects').innerHTML =
+        `<div class="text-red-400 p-4 text-xs">Could not load projects: ${r.status}</div>`; return; }
+    const { results } = await r.json();
+    _cfgProjects = results.map(x => ({ pid: x.project_id, auto: x.match }));
+    cfgRenderProjects(_cfgProjFilter);
+  } catch (e) {
+    document.getElementById('cfg-projects').innerHTML =
+      `<div class="text-red-400 p-4 text-xs">${_cfgEsc(e.message)}</div>`;
+  }
+}
+
+function _cfgEffectiveDims(p) {
+  const base = (p.auto && p.auto.dimensions) || {};
+  const override = _cfg.project_map[p.pid] || {};
+  const dims = Object.assign({}, base, override);   // override only the set dims
+  const mapped = Object.keys(override).length > 0;
+  const source = mapped ? 'mapped'
+    : (p.auto && p.auto.fallback) ? 'fallback'
+    : 'pattern:' + (p.auto ? p.auto.pattern : '');
+  return { dims, source };
+}
+
+function cfgRenderProjects(filter) {
+  _cfgProjFilter = filter || '';
+  const f = _cfgProjFilter.toLowerCase();
+  const dims = _cfg.dimensions;
+  const shown = _cfgProjects.filter(p => p.pid.toLowerCase().includes(f));
+
+  let mapped = 0, pattern = 0, fallback = 0;
+  _cfgProjects.forEach(p => { const s = _cfgEffectiveDims(p).source;
+    if (s === 'mapped') mapped++; else if (s === 'fallback') fallback++; else pattern++; });
+  document.getElementById('cfg-proj-summary').textContent =
+    `${_cfgProjects.length} projects · ${mapped} mapped · ${pattern} by pattern · ${fallback} fallback`;
+
+  let html = `<table class="w-full text-xs"><thead class="bg-slate-800/60 text-slate-500">
+    <tr><th class="px-3 py-1.5 text-left font-medium">Project</th>
+    ${dims.map(d => `<th class="px-2 py-1.5 text-left font-medium">${_cfgEsc(d.label || d.key)}</th>`).join('')}
+    <th class="px-2 py-1.5 text-left font-medium">Source</th><th class="w-6"></th></tr></thead><tbody>`;
+
+  shown.forEach(p => {
+    const pi = _cfgProjects.indexOf(p);
+    const { dims: eff, source } = _cfgEffectiveDims(p);
+    const pinned = source === 'mapped';
+    const badge = pinned
+      ? '<span class="text-emerald-400">mapped</span>'
+      : source === 'fallback'
+        ? '<span class="text-amber-500">fallback</span>'
+        : `<span class="text-blue-400">${_cfgEsc(source.slice(8))}</span>`;
+    html += `<tr class="border-t border-slate-800 ${pinned ? 'bg-emerald-950/20' : ''}">
+      <td class="px-3 py-1 font-mono text-slate-300 align-middle">${_cfgEsc(p.pid)}</td>
+      ${dims.map((d) => `<td class="px-2 py-1">${_cfgDimSelect(pi, d.key, eff[d.key] || '', pinned)}</td>`).join('')}
+      <td class="px-2 py-1 text-[10px]">${badge}</td>
+      <td class="px-1 py-1 text-center">${pinned
+        ? `<button onclick="cfgUnpinProject(${pi})" title="Clear mapping (revert to pattern)" class="text-slate-500 hover:text-red-400">✕</button>`
+        : ''}</td>
+    </tr>`;
+  });
+  html += '</tbody></table>';
+  if (!shown.length) html = '<div class="text-slate-500 p-4 text-xs text-center">No matching projects.</div>';
+  document.getElementById('cfg-projects').innerHTML = html;
+}
+
+// A styled <select> per dimension: known values (shown by their label) + the
+// current value + a "＋ custom…" escape hatch. Cleaner than a datalist popup.
+function _cfgDimSelect(pi, dimKey, cur, pinned) {
+  const labels = _cfg.labels[dimKey] || {};
+  const vals = [...new Set([...Object.keys(labels), cur].filter(Boolean))];
+  const opts = [`<option value=""${!cur ? ' selected' : ''}>—</option>`]
+    .concat(vals.map(v => `<option value="${_cfgEsc(v)}"${v === cur ? ' selected' : ''}>${_cfgEsc(labels[v] || v)}</option>`))
+    .concat([`<option value="__custom__">＋ custom…</option>`]).join('');
+  return `<select onchange="cfgSelectProjectDim(${pi}, '${_cfgEsc(dimKey)}', this)"
+    class="bg-slate-800 border ${pinned ? 'border-emerald-800' : 'border-slate-700'} rounded px-1.5 py-0.5 text-[11px] text-slate-200 w-32 focus:outline-none focus:border-blue-500 cursor-pointer">${opts}</select>`;
+}
+
+function cfgSelectProjectDim(pi, dim, el) {
+  if (el.value !== '__custom__') { cfgEditProjectDim(pi, dim, el.value); return; }
+  // Swap the <select> for an inline text input (no native prompt dialog).
+  const td = el.parentElement;
+  td.innerHTML =
+    `<input type="text" placeholder="custom value…"
+      class="bg-slate-800 border border-blue-500 rounded px-1.5 py-0.5 text-[11px] text-slate-200 w-32 focus:outline-none"
+      onkeydown="cfgCustomKey(event)" onblur="cfgCustomCommit(this, ${pi}, '${_cfgEsc(dim)}')"/>`;
+  td.querySelector('input').focus();
+}
+function cfgCustomKey(ev) {
+  if (ev.key === 'Enter') { ev.preventDefault(); ev.target.blur(); }
+  else if (ev.key === 'Escape') { ev.target.dataset.cancel = '1'; ev.target.blur(); }
+}
+function cfgCustomCommit(input, pi, dim) {
+  const val = input.dataset.cancel ? '' : input.value.trim();
+  if (val) cfgEditProjectDim(pi, dim, val);
+  else cfgRenderProjects(_cfgProjFilter);   // empty/cancelled — restore the dropdown
+}
+
+function cfgEditProjectDim(pi, dim, val) {
+  // Override only this dimension; the rest stay on pattern/fallback (merge).
+  const p = _cfgProjects[pi];
+  const map = _cfg.project_map[p.pid] || (_cfg.project_map[p.pid] = {});
+  if (val === '') delete map[dim]; else map[dim] = val;
+  if (Object.keys(map).length === 0) delete _cfg.project_map[p.pid];  // fully reverted
+  cfgRenderProjects(_cfgProjFilter);
+}
+
+function cfgUnpinProject(pi) {
+  delete _cfg.project_map[_cfgProjects[pi].pid];
+  cfgRenderProjects(_cfgProjFilter);
+}
+
+function cfgLoadPreset() {
+  if (!confirm('Replace the patterns/dimensions/labels with the SONiC preset? Project mappings are kept. (Not saved until you click Save.)')) return;
+  const preset = JSON.parse(JSON.stringify(_CFG_SONIC_PRESET));
+  _cfg = Object.assign(preset, { project_map: _cfg.project_map || {}, views: _cfg.views || [],
+                                 automap: _cfg.automap || {}, metrics: _cfg.metrics || [],
+                                 report: _cfg.report || {} });
+  _cfgBuildAutomapRows();
+  _cfgBuildLabelRows();
+  cfgRenderAll(); cfgResolveProjects();
+  _cfgStatus('Preset loaded — review and Save', 'ok');
+}
+
+function cfgExport() {
+  const blob = new Blob([JSON.stringify(_cfgCollect(), null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'dashboard-config.json';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+function cfgImport(ev) {
+  const f = ev.target.files[0]; if (!f) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const doc = JSON.parse(reader.result);
+      _cfg = { dimensions: doc.dimensions || [], patterns: doc.patterns || [],
+               labels: doc.labels || {}, project_map: doc.project_map || {},
+               views: doc.views || [], automap: doc.automap || {}, metrics: doc.metrics || [],
+               report: doc.report || {} };
+      _cfgBuildAutomapRows();
+      _cfgBuildLabelRows();
+      cfgRenderAll(); cfgResolveProjects();
+      _cfgStatus('Imported — review and Save', 'ok');
+    } catch (e) { _cfgStatus('Import failed: ' + e.message, 'error'); }
+  };
+  reader.readAsText(f);
+  ev.target.value = '';
+}
+</script>
+</body>
+</html>

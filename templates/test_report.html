@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% set rcfg = report_cfg or {} %}
+    <title>{{ rcfg.title_prefix or 'Test Report' }}</title>
+    <style>
+        @import url("https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@500;700&display=swap");
+
+        :root {
+            --bg-main: linear-gradient(170deg, #eef4f9 0%, #e6eff8 45%, #f7fbff 100%);
+            --surface: #ffffff;
+            --surface-soft: #f5f9fc;
+            --text-main: #0f1f2e;
+            --text-muted: #4f6272;
+            --border: #d6e2ec;
+            --accent: #006f8f;
+            --accent-soft: rgba(0, 111, 143, 0.12);
+            --ok: #1e8a5b;
+            --ok-soft: rgba(30, 138, 91, 0.12);
+            --warn: #9a7213;
+            --warn-soft: rgba(154, 114, 19, 0.14);
+            --fail: #bf3d2f;
+            --fail-soft: rgba(191, 61, 47, 0.12);
+            --shadow: 0 18px 38px rgba(13, 34, 52, 0.08);
+            --radius-lg: 20px;
+            --radius-md: 14px;
+            --radius-sm: 10px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            color: var(--text-main);
+            background: var(--bg-main);
+            font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+            line-height: 1.45;
+        }
+
+        .page-shell {
+            position: relative;
+            max-width: 1320px;
+            margin: 0 auto;
+            padding: 28px 20px 52px;
+            overflow: hidden;
+        }
+
+        .orb {
+            position: absolute;
+            border-radius: 999px;
+            filter: blur(1px);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .orb-a {
+            width: 360px;
+            height: 360px;
+            right: -90px;
+            top: -130px;
+            background: radial-gradient(circle at 40% 40%, rgba(0, 111, 143, 0.16), rgba(0, 111, 143, 0));
+        }
+
+        .orb-b {
+            width: 280px;
+            height: 280px;
+            left: -90px;
+            bottom: -110px;
+            background: radial-gradient(circle at 50% 50%, rgba(30, 138, 91, 0.14), rgba(30, 138, 91, 0));
+        }
+
+        .hero,
+        .panel {
+            position: relative;
+            z-index: 1;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            box-shadow: var(--shadow);
+        }
+
+        .hero {
+            padding: 24px 26px;
+            margin-bottom: 20px;
+            display: flex;
+            gap: 20px;
+            justify-content: space-between;
+            align-items: center;
+            background-image: linear-gradient(130deg, rgba(0, 111, 143, 0.08), rgba(0, 111, 143, 0));
+        }
+
+        .hero h1 {
+            margin: 0 0 6px;
+            font-size: clamp(1.5rem, 2.1vw, 2.05rem);
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+            letter-spacing: 0.01em;
+        }
+
+        .hero p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.98rem;
+        }
+
+        .hero-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .meta-chip {
+            background: var(--accent-soft);
+            color: var(--accent);
+            border: 1px solid rgba(0, 111, 143, 0.24);
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 0.84rem;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .section-title {
+            margin: 0;
+            font-size: 1.2rem;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .overview {
+            padding: 20px;
+            margin-bottom: 22px;
+        }
+
+        .overview-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+        .overview-head p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .general-table {
+            min-width: 860px;
+        }
+
+        .general-table tbody tr.overall-row {
+            background: var(--accent-soft);
+        }
+
+        .row-tag {
+            display: inline-block;
+            border-radius: 999px;
+            padding: 3px 9px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            border: 1px solid transparent;
+        }
+
+        .row-tag.overall {
+            color: var(--accent);
+            border-color: rgba(0, 111, 143, 0.34);
+            background: rgba(0, 111, 143, 0.12);
+        }
+
+        .row-tag.run {
+            color: #2f4e67;
+            border-color: rgba(47, 78, 103, 0.26);
+            background: rgba(47, 78, 103, 0.1);
+        }
+
+        .value-pass {
+            color: var(--ok);
+            font-weight: 700;
+        }
+
+        .value-fail {
+            color: var(--fail);
+            font-weight: 700;
+        }
+
+        .value-skip {
+            color: var(--warn);
+            font-weight: 700;
+        }
+
+        .delta {
+            display: inline-block;
+            margin-left: 6px;
+            padding: 1px 6px;
+            border-radius: 999px;
+            font-size: 0.72em;
+            font-weight: 600;
+            line-height: 1.4;
+            vertical-align: middle;
+            white-space: nowrap;
+        }
+        .delta-good {
+            color: #1f7a4a;
+            background: rgba(31, 122, 74, 0.12);
+        }
+        .delta-bad {
+            color: #b3261e;
+            background: rgba(179, 38, 30, 0.12);
+        }
+        .delta-neutral {
+            color: #4b5b6b;
+            background: rgba(75, 91, 107, 0.1);
+        }
+
+        details.collapsible > summary {
+            cursor: pointer;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            user-select: none;
+        }
+        details.collapsible > summary::-webkit-details-marker { display: none; }
+        details.collapsible > summary::before {
+            content: "▾";
+            display: inline-block;
+            font-size: 0.8em;
+            color: #6b7d8e;
+            transition: transform 0.15s ease;
+        }
+        details.collapsible:not([open]) > summary::before { transform: rotate(-90deg); }
+        details.collapsible > summary > h3 { margin: 0; }
+
+        .run-block {
+            padding: 20px;
+            margin-bottom: 20px;
+            animation: rise-in 0.45s ease both;
+        }
+
+        .run-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .run-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: flex-end;
+        }
+
+        .run-meta .meta-chip {
+            font-size: 0.78rem;
+            padding: 4px 10px;
+        }
+
+        .run-head h2 {
+            margin: 0 0 4px;
+            font-size: 1.16rem;
+            font-family: "Space Grotesk", "Trebuchet MS", sans-serif;
+        }
+
+        .run-head p {
+            margin: 0;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        .link-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 14px;
+        }
+
+        .link-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 11px;
+            border-radius: 999px;
+            border: 1px solid rgba(0, 111, 143, 0.32);
+            background: var(--accent-soft);
+            color: var(--accent);
+            text-decoration: none;
+            font-size: 0.83rem;
+            font-weight: 600;
+        }
+
+        .link-chip:hover {
+            background: rgba(0, 111, 143, 0.2);
+        }
+
+        .known-issues {
+            margin-bottom: 14px;
+            border: 1px solid rgba(191, 61, 47, 0.24);
+            background: rgba(191, 61, 47, 0.06);
+            border-radius: var(--radius-md);
+            padding: 10px 12px;
+        }
+
+        .new-fails {
+            margin-bottom: 14px;
+            border: 1px solid rgba(191, 61, 47, 0.28);
+            background: rgba(191, 61, 47, 0.08);
+            border-radius: var(--radius-md);
+            padding: 10px 12px;
+        }
+
+        .new-fails h3 {
+            margin: 0 0 6px;
+            font-size: 0.92rem;
+            color: #902d22;
+        }
+
+        .new-fails p {
+            margin: 0;
+            color: #5b211b;
+            font-size: 0.88rem;
+        }
+
+        .new-fails ul {
+            margin: 0;
+            padding-left: 18px;
+            color: #5b211b;
+        }
+
+        .new-fails li + li {
+            margin-top: 4px;
+        }
+
+        .new-fails .compared {
+            margin-top: 8px;
+            font-size: 0.82rem;
+            color: #7a332a;
+        }
+
+        .new-passes {
+            margin-bottom: 14px;
+            border: 1px solid rgba(30, 138, 91, 0.26);
+            background: rgba(30, 138, 91, 0.08);
+            border-radius: var(--radius-md);
+            padding: 10px 12px;
+        }
+
+        .new-passes h3 {
+            margin: 0 0 6px;
+            font-size: 0.92rem;
+            color: #1d6e49;
+        }
+
+        .new-passes p {
+            margin: 0;
+            color: #1e5239;
+            font-size: 0.88rem;
+        }
+
+        .new-passes ul {
+            margin: 0;
+            padding-left: 18px;
+            color: #1e5239;
+        }
+
+        .new-passes li + li {
+            margin-top: 4px;
+        }
+
+        .known-issues h3 {
+            margin: 0 0 6px;
+            font-size: 0.92rem;
+            color: #902d22;
+        }
+
+        .known-issues ul {
+            margin: 0;
+            padding-left: 18px;
+            color: #5b211b;
+        }
+
+        .known-issues li + li {
+            margin-top: 4px;
+        }
+
+        .table-wrap {
+            width: 100%;
+            overflow-x: auto;
+            border-radius: var(--radius-md);
+            border: 1px solid var(--border);
+        }
+
+        .suite-table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+            min-width: 720px;
+            background: #fff;
+        }
+
+        .suite-table th,
+        .suite-table td {
+            padding: 10px 11px;
+            text-align: left;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .suite-table th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            font-size: 0.78rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            background: #f7fbff;
+        }
+
+        .suite-table tbody tr:hover {
+            background: #f4f9fc;
+        }
+
+        .suite-table tbody tr.pass {
+            background: var(--ok-soft);
+        }
+
+        .suite-table tbody tr.fail {
+            background: var(--fail-soft);
+        }
+
+        .status-badge {
+            display: inline-block;
+            border-radius: 999px;
+            padding: 4px 8px;
+            font-size: 0.77rem;
+            font-weight: 700;
+            border: 1px solid transparent;
+        }
+
+        .status-pass {
+            color: var(--ok);
+            background: var(--ok-soft);
+            border-color: rgba(30, 138, 91, 0.28);
+        }
+
+        .status-fail {
+            color: var(--fail);
+            background: var(--fail-soft);
+            border-color: rgba(191, 61, 47, 0.28);
+        }
+
+        @keyframes rise-in {
+            from {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+            .stat-card,
+            .run-block {
+                animation: none;
+            }
+        }
+
+        @media (max-width: 920px) {
+            .hero {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .hero-meta {
+                justify-content: flex-start;
+            }
+
+            .run-head {
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .run-meta {
+                justify-content: flex-start;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="page-shell">
+        {% set run_cadence = links.run_cadence or 'Custom' %}
+        {% set flag_label = rcfg.flag_label or 'Flagged' %}
+        {% set unit_label = rcfg.unit_label or 'Unit' %}
+
+        <div class="orb orb-a"></div>
+        <div class="orb orb-b"></div>
+
+        <header class="hero">
+            <div>
+                <h1>{{ rcfg.title_prefix or 'Test Report' }} | WW{{ links.workweek }} {{ run_cadence }} Run{% if links.contains_ols %} {{ flag_label }}{% endif %} | {{ links.generated_on }}</h1>
+                <p>Consolidated quality signal from Allure execution data for {{ run_cadence|lower }} execution cadence.</p>
+            </div>
+            <div class="hero-meta">
+                <span class="meta-chip">WW{{ links.workweek }}</span>
+                <span class="meta-chip">{{ run_cadence }} Run</span>
+                <span class="meta-chip">Image {{ links.image_family }}</span>
+                <span class="meta-chip">Date {{ links.generated_on }}</span>
+                {% if links.contains_ols %}
+                <span class="meta-chip">{{ flag_label }} Included</span>
+                {% endif %}
+                <span class="meta-chip">Version {{ links.version }}</span>
+                <span class="meta-chip">{{ general_stats_list|length - 1 }} {{ unit_label }} Runs</span>
+            </div>
+        </header>
+
+        <section class="panel overview">
+            <div class="overview-head">
+                <h2 class="section-title">General Statistics</h2>
+                <p>Overall summary plus per-run snapshots</p>
+            </div>
+            <div class="table-wrap">
+                <table class="suite-table general-table">
+                    <thead>
+                        <tr>
+                            <th>Type</th>
+                            <th>{{ unit_label }}</th>
+                            <th>Total</th>
+                            <th>Passed</th>
+                            <th>Failed</th>
+                            <th>Skipped</th>
+                            <th>Duration</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for stats in general_stats_list %}
+                        <tr class="{{ 'overall-row' if loop.index0 == 0 else '' }}">
+                            <td>
+                                <span class="row-tag {{ 'overall' if loop.index0 == 0 else 'run' }}">
+                                    {{ 'Overall' if loop.index0 == 0 else 'Run' }}
+                                </span>
+                            </td>
+                            <td>{{ stats.DUT }}</td>
+                            <td>
+                                {{ stats.total }}
+                                {% if stats.prev is defined and stats.prev %}
+                                    {% set d = stats.total - stats.prev.total %}
+                                    {% if d != 0 %}<span class="delta delta-neutral">{{ '▲' if d > 0 else '▼' }} {{ d if d < 0 else '+' ~ d }}</span>{% endif %}
+                                {% endif %}
+                            </td>
+                            <td class="value-pass">
+                                {{ stats.passed }} ({{ stats.passed_percentage }}%)
+                                {% if stats.prev is defined and stats.prev %}
+                                    {% set d = stats.passed - stats.prev.passed %}
+                                    {% if d != 0 %}<span class="delta {{ 'delta-good' if d > 0 else 'delta-bad' }}">{{ '▲' if d > 0 else '▼' }} {{ d if d < 0 else '+' ~ d }}</span>{% endif %}
+                                {% endif %}
+                            </td>
+                            <td class="value-fail">
+                                {{ stats.failed }} ({{ stats.failed_percentage }}%)
+                                {% if stats.prev is defined and stats.prev %}
+                                    {% set d = stats.failed - (stats.prev.failed + stats.prev.broken + stats.prev.unknown) %}
+                                    {% if d != 0 %}<span class="delta {{ 'delta-bad' if d > 0 else 'delta-good' }}">{{ '▲' if d > 0 else '▼' }} {{ d if d < 0 else '+' ~ d }}</span>{% endif %}
+                                {% endif %}
+                            </td>
+                            <td class="value-skip">
+                                {{ stats.skipped }} ({{ stats.skipped_percentage }}%)
+                                {% if stats.prev is defined and stats.prev %}
+                                    {% set d = stats.skipped - stats.prev.skipped %}
+                                    {% if d != 0 %}<span class="delta {{ 'delta-bad' if d > 0 else 'delta-good' }}">{{ '▲' if d > 0 else '▼' }} {{ d if d < 0 else '+' ~ d }}</span>{% endif %}
+                                {% endif %}
+                            </td>
+                            <td>
+                                {{ stats.duration if stats.duration else '-' }}
+                                {% if stats.duration and stats.prev is defined and stats.prev and stats.prev.duration_ms is defined %}
+                                    {% set d_ms = (stats.duration_ms if stats.duration_ms is defined else 0) - stats.prev.duration_ms %}
+                                    {% set abs_s = ((d_ms if d_ms > 0 else -d_ms) / 1000) | int %}
+                                    {% if abs_s < 3600 %}
+                                        {% set d_txt = (abs_s // 60) ~ 'm' %}
+                                    {% else %}
+                                        {% set d_txt = (abs_s // 3600) ~ 'h' %}
+                                    {% endif %}
+                                    {% if d_ms != 0 %}<span class="delta delta-neutral">{{ '▲' if d_ms > 0 else '▼' }} {{ '+' if d_ms > 0 else '-' }}{{ d_txt }}</span>{% endif %}
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        {% for stat in general_stats_list_copy %}
+        <section class="panel run-block" style="animation-delay: {{ 0.08 + loop.index0 * 0.06 }}s;">
+            <div class="run-head">
+                <div>
+                    <h2>Test Summary {{ stat.DUT }}</h2>
+                    <p>{{ stat.links.image_family }} | {{ stat.links.image_version }}{% if stat.links.is_ols %} | {{ flag_label }} image{% endif %}</p>
+                </div>
+                <div class="run-meta">
+                    <span class="meta-chip">{{ stat.links.image_family }}</span>
+                    <span class="meta-chip">{{ stat.links.image_type }} Image</span>
+                    {% if stat.links.is_ols and rcfg.flag_description %}
+                    <span class="meta-chip">{{ rcfg.flag_description }}</span>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="link-row">
+                <a class="link-chip" href="{{ stat.links.allure_report }}">Allure Report</a>
+                {% if stat.links.image and stat.links.image != 'N/A' %}
+                <a class="link-chip" href="{{ stat.links.image }}">Build Image</a>
+                {% endif %}
+            </div>
+
+            <details class="new-fails collapsible">
+                <summary><h3>New Fails vs Previous Report ({{ stat.new_failed_tests|length if stat.new_failed_tests else 0 }})</h3></summary>
+                {% if stat.new_fails_note %}
+                <p>{{ stat.new_fails_note }}</p>
+                {% elif stat.new_failed_tests %}
+                <ul>
+                    {% for fail in stat.new_failed_tests %}
+                    <li>{{ fail.name }}{% if fail.statusMessage %} - {{ fail.statusMessage | linkify_jira(jira_statuses) }}{% endif %}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p>No new fails detected compared to the previous report.</p>
+                {% endif %}
+                {% if stat.previous_report_url %}
+                <p class="compared">Compared with: <a href="{{ stat.previous_report_url }}">{{ stat.previous_report_url }}</a></p>
+                {% endif %}
+            </details>
+
+            <details class="new-passes collapsible">
+                <summary><h3>New Passes vs Previous Report ({{ stat.new_passed_tests|length if stat.new_passed_tests else 0 }})</h3></summary>
+                {% if stat.new_fails_note %}
+                <p>{{ stat.new_fails_note }}</p>
+                {% elif stat.new_passed_tests %}
+                <ul>
+                    {% for test in stat.new_passed_tests %}
+                    <li>{{ test.name }}{% if test.previous_status %} (was {{ test.previous_status }}){% endif %}</li>
+                    {% endfor %}
+                </ul>
+                {% else %}
+                <p>No new passes detected compared to the previous report.</p>
+                {% endif %}
+            </details>
+
+            {% if stat.known_issues %}
+            <details class="known-issues collapsible">
+                <summary><h3>Known Issues ({{ stat.known_issues|length }})</h3></summary>
+                <ul>
+                    {% for issue in stat.known_issues %}
+                    <li>{{ issue.name }}{% if issue.statusMessage %} - {{ issue.statusMessage | inject_jira_badges(jira_statuses) | safe }}{% endif %}</li>
+                    {% endfor %}
+                </ul>
+            </details>
+            {% endif %}
+
+            <div class="table-wrap">
+                <table class="suite-table">
+                    <thead>
+                        <tr>
+                            <th>Test Suite</th>
+                            <th>Passed</th>
+                            <th>Failed</th>
+                            <th>Skipped</th>
+                            <th>Total</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for test in stat.test_summary %}
+                        <tr class="{{ 'pass' if test.status == 'Pass' else 'fail' }}">
+                            <td>{{ test.name }}</td>
+                            <td>{{ test.passed }}</td>
+                            <td>{{ test.failed + test.broken + test.unknown }}</td>
+                            <td>{{ test.skipped }}</td>
+                            <td>{{ test.total }}</td>
+                            <td>
+                                <span class="status-badge {{ 'status-pass' if test.status == 'Pass' else 'status-fail' }}">
+                                    {{ test.status }}
+                                </span>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </section>
+        {% endfor %}
+    </main>
+</body>
+</html>

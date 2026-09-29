@@ -1,0 +1,636 @@
+{
+  "version": 1,
+  "scope": "standard",
+  "features": [
+    {
+      "name": "Platform Klish",
+      "group": "Platform",
+      "mappings": [
+        "test_show_platform_fan",
+        "test_show_platform_firmware_status",
+        "test_show_platform_firmware_version",
+        "test_show_platform_pcieinfo",
+        "test_show_platform_psustatus",
+        "test_show_platform_summary",
+        "test_show_platform_syseeprom",
+        "test_show_platform_temperature",
+        "test_show_version"
+      ]
+    },
+    {
+      "name": "Platform CLI",
+      "group": "Platform",
+      "mappings": [
+        "test_platform_serial_no",
+        "test_show_platform_fan",
+        "test_show_platform_firmware_status",
+        "test_show_platform_pcieinfo",
+        "test_show_platform_psustatus",
+        "test_show_platform_psustatus_json",
+        "test_show_platform_ssdhealth",
+        "test_show_platform_summary",
+        "test_show_platform_syseeprom",
+        "test_show_platform_temperature"
+      ]
+    },
+    {
+      "name": "Platform API",
+      "group": "Platform",
+      "mappings": [
+        "test_components",
+        "test_fan_drawers",
+        "test_fans",
+        "test_get_all_fans",
+        "test_get_available_firmware_version",
+        "test_get_base_mac",
+        "test_get_description",
+        "test_get_direction",
+        "test_get_eeprom",
+        "test_get_error_description",
+        "test_get_fans_target_speed",
+        "test_get_firmware_update_notification",
+        "test_get_firmware_version",
+        "test_get_high_critical_threshold",
+        "test_get_high_threshold",
+        "test_get_low_critical_threshold",
+        "test_get_low_threshold",
+        "test_get_maximum_consumed_power",
+        "test_get_maximum_recorded",
+        "test_get_minimum_recorded",
+        "test_get_model",
+        "test_get_my_slot",
+        "test_get_name",
+        "test_get_num_fans",
+        "test_get_position_in_parent",
+        "test_get_presence",
+        "test_get_reboot_cause",
+        "test_get_reset_status",
+        "test_get_revision",
+        "test_get_rx_los",
+        "test_get_rx_power",
+        "test_get_serial",
+        "test_get_speed",
+        "test_get_status",
+        "test_get_supervisor_slot",
+        "test_get_system_eeprom_info",
+        "test_get_temperature",
+        "test_get_thermal_manager",
+        "test_get_transceiver_bulk_status",
+        "test_get_transceiver_info",
+        "test_get_transceiver_threshold_info",
+        "test_get_tx_bias",
+        "test_get_tx_fault",
+        "test_get_tx_power",
+        "test_get_voltage",
+        "test_get_watchdog",
+        "test_install_firmware",
+        "test_is_replaceable",
+        "test_led",
+        "test_lpmode",
+        "test_master_led",
+        "test_modules",
+        "test_port_toggle",
+        "test_power",
+        "test_power_override",
+        "test_psus",
+        "test_reset",
+        "test_set_fan_drawers_led",
+        "test_set_fans_led",
+        "test_set_fans_speed",
+        "test_set_high_threshold",
+        "test_set_low_threshold",
+        "test_sfps",
+        "test_status_led",
+        "test_temperature",
+        "test_thermals",
+        "test_tx_disable",
+        "test_tx_disable_channel",
+        "test_update_firmware"
+      ]
+    },
+    {
+      "name": "TACACS+",
+      "group": "Management & Security",
+      "mappings": [
+        "test_accounting_local_only",
+        "test_accounting_tacacs_and_local",
+        "test_accounting_tacacs_and_local_all_tacacs_server_down",
+        "test_accounting_tacacs_only",
+        "test_accounting_tacacs_only_all_tacacs_server_down",
+        "test_accounting_tacacs_only_some_tacacs_server_down",
+        "test_authorization_local",
+        "test_authorization_tacacs_and_local",
+        "test_authorization_tacacs_and_local_then_server_down_after_login",
+        "test_authorization_tacacs_only",
+        "test_authorization_tacacs_only_some_server_down",
+        "test_authorization_tacacs_only_some_server_down_klish",
+        "test_authorization_tacacs_only_then_server_down_after_login",
+        "test_backward_compatibility_disable_authorization",
+        "test_bypass_authorization",
+        "test_fallback_to_local_authorization_with_config_reload",
+        "test_jit_user",
+        "test_ro_user",
+        "test_ro_user_allowed_command",
+        "test_ro_user_banned_by_sudoers_command",
+        "test_ro_user_banned_command",
+        "test_ro_user_ipv6",
+        "test_rw_user",
+        "test_rw_user_ipv6",
+        "test_send_remote_address",
+        "test_stop_request_next_server_after_reject",
+        "test_tacacs_authorization_wildcard"
+      ]
+    },
+    {
+      "name": "RADIUS",
+      "group": "Management & Security",
+      "mappings": [
+        "test_login_local_klish",
+        "test_login_local_klish_radius_attributes",
+        "test_login_local_radius_failthrough_klish",
+        "test_login_local_radius_klish",
+        "test_login_radius_failthrough_multiple_servers_klish",
+        "test_login_radius_invalid_server_klish",
+        "test_login_radius_klish",
+        "test_login_radius_local_failthrough_klish",
+        "test_login_radius_local_klish",
+        "test_radius_readonly_user_privilege_klish",
+        "test_radius_source_interface_klish"
+      ]
+    },
+    {
+      "name": "802.1X",
+      "group": "Management & Security",
+      "mappings": [
+        "test_nac"
+      ]
+    },
+    {
+      "name": "MACsec",
+      "group": "Management & Security",
+      "mappings": [
+        "test_macsec_assign_to_port",
+        "test_macsec_can_update_values",
+        "test_macsec_default_values",
+        "test_macsec_docker_restart",
+        "test_macsec_dut_reboot",
+        "test_macsec_with_config_reload",
+        "test_macsec_wrong_mka_config",
+        "test_single_macsec_link_port_tagged",
+        "test_two_macsec_links_both_port_untagged",
+        "test_two_macsec_links_port_tagged_untagged",
+        "test_two_macsec_links_single_port_untagged"
+      ]
+    },
+    {
+      "name": "SSH",
+      "group": "Management & Security",
+      "mappings": [
+        "test_ssh_enc_ciphers",
+        "test_ssh_kex",
+        "test_ssh_limits",
+        "test_ssh_macs",
+        "test_ssh_protocol_version"
+      ]
+    },
+    {
+      "name": "Management VRF",
+      "group": "Management & Security",
+      "mappings": []
+    },
+    {
+      "name": "OLS Client",
+      "group": "Management & Security",
+      "mappings": []
+    },
+    {
+      "name": "Write Memory",
+      "group": "CLI Configuration",
+      "mappings": [
+        "test_l2_config",
+        "test_write_memory_klish"
+      ]
+    },
+    {
+      "name": "Super Set",
+      "group": "CLI Configuration",
+      "mappings": [
+        "test_super_set_klish"
+      ]
+    },
+    {
+      "name": "SCP",
+      "group": "CLI Configuration",
+      "mappings": [
+        "test_scp_copy"
+      ]
+    },
+    {
+      "name": "Port Configuration",
+      "group": "Layer 2",
+      "mappings": [
+        "test_acl_mismatch_error",
+        "test_advertised_speed_setting",
+        "test_assign_bound_acl_to_another_direction_raises_error",
+        "test_autoneg_setting",
+        "test_flow_control_mismatch_error",
+        "test_interface_advertised_value_error",
+        "test_interface_loopback",
+        "test_interface_management",
+        "test_interfaces",
+        "test_l3_configuration_exists_error",
+        "test_l3_configuration_on_vlan_port_error",
+        "test_mtu_mismatch_error",
+        "test_multi_port_description_mtu_type",
+        "test_multi_port_speed_autoneg_advertised",
+        "test_non_existent_portchannel_error",
+        "test_port_already_in_another_portchannel_error",
+        "test_ports_mismatch_error",
+        "test_remove_acl_witn_bound_interface_raises_error",
+        "test_remove_loopback_with_ip_raises_error",
+        "test_show_interface_status",
+        "test_speed_mismatch_error",
+        "test_vlan_mismatch_error"
+      ]
+    },
+    {
+      "name": "VLAN",
+      "group": "Layer 2",
+      "mappings": [
+        "test_autostate_disabled",
+        "test_host_vlan_no_floodling",
+        "test_vlan_connectivity",
+        "test_vlan_ping",
+        "test_vlan_tc1_send_untagged",
+        "test_vlan_tc2_send_tagged",
+        "test_vlan_tc3_send_invalid_vid",
+        "test_vlan_tc4_tagged_unicast",
+        "test_vlan_tc5_untagged_unicast",
+        "test_vlan_tc6_tagged_untagged_unicast",
+        "test_vlan_tc7_tagged_qinq_switch_on_outer_tag"
+      ]
+    },
+    {
+      "name": "FDB",
+      "group": "Layer 2",
+      "mappings": [
+        "testFdbFlush",
+        "testFdbMacExpire",
+        "test_fdb",
+        "test_fdb_mac_move",
+        "test_self_mac_not_learnt"
+      ]
+    },
+    {
+      "name": "Nested VLAN",
+      "group": "Layer 2",
+      "mappings": [
+        "test_nested_vlan_decap_ethernet_port",
+        "test_nested_vlan_encap_ethernet_port"
+      ]
+    },
+    {
+      "name": "LLDP",
+      "group": "Layer 2",
+      "mappings": [
+        "test_lldp",
+        "test_lldp_neighbor"
+      ]
+    },
+    {
+      "name": "PVST",
+      "group": "Layer 2",
+      "mappings": [
+        "test_enable_pvst_globally",
+        "test_forward_delay",
+        "test_global_priority",
+        "test_hello",
+        "test_max_age",
+        "test_pvst_bpdu_guard",
+        "test_pvst_global_max_age",
+        "test_pvst_global_rguard_timeout",
+        "test_pvst_global_vlan"
+      ]
+    },
+    {
+      "name": "LAG/LACP",
+      "group": "Layer 2",
+      "mappings": [
+        "test_lag",
+        "test_lag_db_status",
+        "test_lag_db_status_with_po_update",
+        "test_lag_member_status",
+        "test_lag_member_status_vlan_klish",
+        "test_lag_member_traffic",
+        "test_po_cleanup",
+        "test_po_cleanup_after_reload",
+        "test_po_update",
+        "test_po_update_io_no_loss",
+        "test_po_update_with_higher_lagids"
+      ]
+    },
+    {
+      "name": "IGMP Snooping",
+      "group": "Layer 2",
+      "mappings": [
+        "test_igmp_disable_l2mcd_container",
+        "test_igmp_disable_on_vlan",
+        "test_igmp_fast_leave",
+        "test_igmp_mc_disable_enable",
+        "test_igmp_member_port_down",
+        "test_igmp_pim_hello_msg",
+        "test_igmp_port_in_multiple_l2mc",
+        "test_igmp_port_leave_vlan",
+        "test_igmp_reboot",
+        "test_igmp_report_leave",
+        "test_igmp_service",
+        "test_igmp_static",
+        "test_igmp_static_config",
+        "test_igmp_version_compatability"
+      ]
+    },
+    {
+      "name": "MCLAG",
+      "group": "Layer 2",
+      "mappings": []
+    },
+    {
+      "name": "Storm Control",
+      "group": "Layer 2",
+      "mappings": [
+        "test_add_del_storm_control",
+        "test_configure_all_ports_storm_control",
+        "test_configure_invalid_interface_storm_control",
+        "test_configure_invalid_storm_control_kbps_value",
+        "test_configure_invalid_storm_control_type",
+        "test_negative_storm_control",
+        "test_positive_storm_control",
+        "test_update_storm_control_kbps_value"
+      ]
+    },
+    {
+      "name": "QoS",
+      "group": "Layer 2",
+      "mappings": [
+        "test_qos_dot_1p_to_dscp_mapping",
+        "test_qos_dscp_to_tc_mapping",
+        "test_qos_map_delete_with_active_interface",
+        "test_qos_tc_queue_mapping"
+      ]
+    },
+    {
+      "name": "Docker Stability",
+      "group": "Stability",
+      "mappings": [
+        "test_docker_stability_100routes",
+        "test_docker_stability_portchannel_4routes",
+        "test_docker_stability_vlan_4routes"
+      ]
+    },
+    {
+      "name": "DHCP Client",
+      "group": "Layer 3 - DHCP",
+      "mappings": [
+        "test_dhcp_client_disable_on_one_vlan_does_not_affect_others",
+        "test_inband_dhcp_client_multi_vlan_klish",
+        "test_inband_dhcp_client_on_tagged_vlan_klish",
+        "test_inband_dhcp_client_on_vlan",
+        "test_inband_dhcp_client_traceroute_klish"
+      ]
+    },
+    {
+      "name": "DHCP Server",
+      "group": "Layer 3 - DHCP",
+      "mappings": [
+        "test_klish_dhcp_mandatory_options_lifecycle",
+        "test_klish_dhcp_server_port_based_assignment_range_ip",
+        "test_klish_dhcp_server_single_ip_assignment_tc1"
+      ]
+    },
+    {
+      "name": "DHCP Relay",
+      "group": "Layer 3 - DHCP",
+      "mappings": [
+        "test_dhcp_relay_after_link_flap",
+        "test_dhcp_relay_counter",
+        "test_dhcp_relay_default",
+        "test_dhcp_relay_random_sport",
+        "test_dhcp_relay_start_with_uplinks_down",
+        "test_dhcp_relay_unicast_mac",
+        "test_dhcpv6_relay_counter",
+        "test_interface_binding"
+      ]
+    },
+    {
+      "name": "ARP",
+      "group": "Layer 3 - Routing",
+      "mappings": [
+        "testNeighborMacNoPtf",
+        "test_arp_garp_enabled",
+        "test_proxy_arp",
+        "test_tagged_arp_pkt"
+      ]
+    },
+    {
+      "name": "IPv4/IPv6 Routing",
+      "group": "Layer 3 - Routing",
+      "mappings": [
+        "test_dip_sip",
+        "test_dir_bcast",
+        "test_drop_ip_packet_with_wrong_0xffff_chksum",
+        "test_drop_l3_ip_packet_non_dut_mac",
+        "test_forward_ip_packet_recomputed_0x0000_chksum",
+        "test_forward_ip_packet_recomputed_0xffff_chksum",
+        "test_forward_ip_packet_with_0x0000_chksum",
+        "test_forward_ip_packet_with_0xffff_chksum_drop",
+        "test_forward_ip_packet_with_0xffff_chksum_tolerant",
+        "test_forward_normal_ip_packet"
+      ]
+    },
+    {
+      "name": "Static Routing",
+      "group": "Layer 3 - Routing",
+      "mappings": [
+        "test_static_route",
+        "test_static_route_ipv6"
+      ]
+    },
+    {
+      "name": "ECMP",
+      "group": "Layer 3 - Routing",
+      "mappings": [
+        "test_static_route_ecmp",
+        "test_static_route_ecmp_ipv6"
+      ]
+    },
+    {
+      "name": "BGP",
+      "group": "Layer 3 - Routing",
+      "mappings": [
+        "test_bgp_speaker_announce_routes_klish",
+        "test_bgp_speaker_announce_routes_v6_klish",
+        "test_bgp_speaker_klish",
+        "test_klish_bgp_facts_equivalent",
+        "test_klish_bgp_ipv4_summary",
+        "test_klish_bgp_ipv6_summary"
+      ]
+    },
+    {
+      "name": "OSPFv2",
+      "group": "Layer 3 - Routing",
+      "mappings": [
+        "test_ospf_dynamic_routing",
+        "test_ospf_functional_connectivity",
+        "test_ospf_neighborship",
+        "test_ospf_vlan_configuration"
+      ]
+    },
+    {
+      "name": "IS-IS",
+      "group": "Layer 3 - Routing",
+      "mappings": [
+        "test_isis_ecmp_positive_reply",
+        "test_isis_end_to_end_klish",
+        "test_isis_end_to_end_klish_v6",
+        "test_isis_hello_interval_klish",
+        "test_isis_iface_timers_and_metric",
+        "test_isis_klish_smoke_neighbor_up",
+        "test_isis_klish_smoke_neighbor_up_v6",
+        "test_isis_process_timers_running_config",
+        "test_isis_spf_default_interval_klish"
+      ]
+    },
+    {
+      "name": "PIM",
+      "group": "Layer 3 - Routing",
+      "mappings": [
+        "test_pim_first_hop_router",
+        "test_pim_last_hop_port_channel",
+        "test_pim_last_hop_router",
+        "test_pim_last_hop_vlan_oif",
+        "test_pim_multi_group_join",
+        "test_pim_multi_source_group",
+        "test_pim_negative_rpf",
+        "test_pim_neighbor_discovery",
+        "test_pim_rendezvous_point",
+        "test_pim_source_specific_multicast"
+      ]
+    },
+    {
+      "name": "ACL",
+      "group": "Security",
+      "mappings": [
+        "test_acl_deletion_order",
+        "test_cacl_function",
+        "test_dest_ip_match_dropped",
+        "test_dest_ip_match_forwarded",
+        "test_egress_unmatched_forwarded",
+        "test_icmp_match_forwarded",
+        "test_icmp_source_ip_match_dropped",
+        "test_icmp_source_ip_match_forwarded",
+        "test_ingress_unmatched_blocked",
+        "test_ip_proto_match_dropped",
+        "test_ip_proto_match_forwarded",
+        "test_l4_dport_match_dropped",
+        "test_l4_dport_match_forwarded",
+        "test_l4_dport_range_match_dropped",
+        "test_l4_dport_range_match_forwarded",
+        "test_l4_sport_match_dropped",
+        "test_l4_sport_match_forwarded",
+        "test_l4_sport_range_match_dropped",
+        "test_l4_sport_range_match_forwarded",
+        "test_null_route_helper",
+        "test_rules_priority_dropped",
+        "test_rules_priority_forwarded",
+        "test_show_acl_configuration",
+        "test_show_acl_groups",
+        "test_show_acl_lists",
+        "test_source_ip_match_dropped",
+        "test_source_ip_match_forwarded",
+        "test_tcp_flags_match_dropped",
+        "test_tcp_flags_match_forwarded",
+        "test_udp_source_ip_match_dropped",
+        "test_udp_source_ip_match_forwarded"
+      ]
+    },
+    {
+      "name": "DNS",
+      "group": "Layer 7",
+      "mappings": [
+        "test_dns_resolv_conf"
+      ]
+    },
+    {
+      "name": "NTP",
+      "group": "Layer 7",
+      "mappings": [
+        "test_ntp",
+        "test_ntp_long_jump_disabled",
+        "test_ntp_long_jump_enabled"
+      ]
+    },
+    {
+      "name": "PoE++",
+      "group": "Power",
+      "mappings": [
+        "test_poe_active_client",
+        "test_poe_lldp",
+        "test_poe_power",
+        "test_poe_power_limit",
+        "test_poe_power_limit_error",
+        "test_poe_priority",
+        "test_poe_proto_ranges"
+      ]
+    },
+    {
+      "name": "Boot Requirements",
+      "group": "System",
+      "mappings": [
+        "test_boot_time_sonic_bpa_after_reboot",
+        "test_l2_traffic_to_dut_after_reboot",
+        "test_l3_traffic_to_dut_after_reboot",
+        "test_ports_oper_equal_up_after_reboot",
+        "test_reboot_cause_history_table",
+        "test_reboot_reason_time_difference_acceptable",
+        "test_services_ready_after_reboot",
+        "test_show_version_after_reboot",
+        "test_syseeprom_after_reboot"
+      ]
+    },
+    {
+      "name": "System Health",
+      "group": "System",
+      "mappings": [
+        "test_cpu_memory_usage",
+        "test_cpu_memory_usage_counterpoll",
+        "test_device_checker",
+        "test_device_fan_speed_checker",
+        "test_external_checker",
+        "test_flush_unused_database",
+        "test_gather_execution_time",
+        "test_logrotate_normal_size",
+        "test_logrotate_small_size",
+        "test_orchagent_logrotate",
+        "test_service_checker",
+        "test_service_checker_with_process_exit",
+        "test_syslog",
+        "test_syslog_rate_limit",
+        "test_system_health_config",
+        "test_system_is_running"
+      ]
+    },
+    {
+      "name": "Port Statistics",
+      "group": "System",
+      "mappings": [
+        "test_clear_interface_counters",
+        "test_portstat_clear",
+        "test_portstat_delete_all",
+        "test_portstat_delete_tag",
+        "test_portstat_display_all",
+        "test_portstat_no_exceptions",
+        "test_portstat_period"
+      ]
+    }
+  ]
+}
