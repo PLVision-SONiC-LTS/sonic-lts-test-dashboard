@@ -538,6 +538,7 @@ def jira_get_issue(
     include_subtasks: bool = False,
     include_watchers: bool = False,
     include_changelog: bool = False,
+    include_slts_description: bool = False,
     comment_body_max_chars: Optional[int] = None,
 ) -> dict[str, Any]:
     """Fetch one issue by key (e.g. PROJ-1234).
@@ -563,6 +564,7 @@ def jira_get_issue(
         include_subtasks = True
         include_watchers = True
         include_changelog = True
+        include_slts_description = True
 
     field_list = [
         "summary",
@@ -583,6 +585,8 @@ def jira_get_issue(
         field_list.append("subtasks")
     if include_issue_links:
         field_list.append("issuelinks")
+    if include_slts_description:
+        field_list.append("customfield_20000")  # SLTS description (if present in this Jira instance)
 
     params: dict[str, Any] = {"fields": ",".join(field_list)}
     if include_changelog:
