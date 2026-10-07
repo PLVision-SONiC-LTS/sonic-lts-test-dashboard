@@ -247,6 +247,7 @@ def _issue_compact(
     issue: dict[str, Any],
     *,
     include_description: bool = False,
+    include_slts_description: bool = False,
     desc_max: int = 2000,
 ) -> dict[str, Any]:
     key = issue["key"]
@@ -269,6 +270,8 @@ def _issue_compact(
     }
     if include_description:
         out["description"] = _description_to_text(fields.get("description"), desc_max)
+    if include_slts_description:
+        out["slts_description"] = _description_to_text(fields.get("customfield_20000"), desc_max)
     return out
 
 
@@ -604,6 +607,7 @@ def jira_get_issue(
     issue = _issue_compact(
         {"key": data.get("key", key), "fields": fields},
         include_description=include_description,
+        include_slts_description=include_slts_description,
         desc_max=desc_max,
     )
     labels = fields.get("labels")
